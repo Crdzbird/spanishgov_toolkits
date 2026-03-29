@@ -1,0 +1,27 @@
+name: felectronic_dnie_ios
+description: iOS implementation of the felectronic_dnie plugin
+version: 0.1.0+1
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+
+flutter:
+  plugin:
+    implements: felectronic_dnie
+    platforms:
+      ios:
+        pluginClass: FelectronicDniePlugin
+        dartPluginClass: FelectronicDnieIOS
+
+dependencies:
+  felectronic_dnie_platform_interface:
+    path: ../felectronic_dnie_platform_interface
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  plugin_platform_interface: ^2.1.8
+  very_good_analysis: ^10.2.0
