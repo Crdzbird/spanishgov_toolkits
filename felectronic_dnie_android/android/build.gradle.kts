@@ -20,8 +20,10 @@ allprojects {
     }
 }
 
-apply plugin: "com.android.library"
-apply plugin: "kotlin-android"
+plugins {
+    id("com.android.library")
+    id("kotlin-android")
+}
 
 android {
     namespace = "es.gob.electronic_dnie"
@@ -37,11 +39,13 @@ android {
     }
 
     sourceSets {
-        main.java.srcDirs += "src/main/kotlin"
+        getByName("main") {
+            java.srcDirs("src/main/kotlin")
+        }
     }
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 24
     }
 
     lint {
@@ -50,7 +54,7 @@ android {
 }
 
 dependencies {
-    implementation(fileTree(dir: "libs", include: ["*.jar"]))
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 
     implementation("org.bouncycastle:bcpkix-jdk15to18:1.78.1")
     implementation("org.bouncycastle:bcprov-jdk15to18:1.78.1")

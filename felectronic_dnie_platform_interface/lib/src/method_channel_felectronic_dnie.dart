@@ -9,6 +9,14 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
   @visibleForTesting
   FelectronicDnieHostApi api = FelectronicDnieHostApi();
 
+  Future<T> _guard<T>(Future<T> Function() call) async {
+    try {
+      return await call();
+    } on PlatformException catch (e) {
+      throw DnieError.fromPlatformException(e);
+    }
+  }
+
   @override
   Future<SignedData> sign({
     required Uint8List data,
@@ -16,29 +24,20 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
     required String pin,
     int timeout = 30,
     DnieCertificateType certificateType = DnieCertificateType.sign,
-  }) async {
-    try {
-      final result = await api.sign(
-        data,
-        can,
-        pin,
-        timeout,
-        certificateType.value,
-      );
-      return _toSignedData(result);
-    } on PlatformException catch (e) {
-      throw DnieError.fromPlatformException(e);
-    }
-  }
+  }) =>
+      _guard(() async {
+        final result = await api.sign(
+          data,
+          can,
+          pin,
+          timeout,
+          certificateType.value,
+        );
+        return _toSignedData(result);
+      });
 
   @override
-  Future<void> stopSign() async {
-    try {
-      await api.stopSign();
-    } on PlatformException catch (e) {
-      throw DnieError.fromPlatformException(e);
-    }
-  }
+  Future<void> stopSign() => _guard(api.stopSign);
 
   @override
   Future<SignedData> readCertificate({
@@ -46,33 +45,27 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
     required String pin,
     int timeout = 30,
     DnieCertificateType certificateType = DnieCertificateType.sign,
-  }) async {
-    try {
-      final result = await api.readCertificate(
-        can,
-        pin,
-        timeout,
-        certificateType.value,
-      );
-      return _toSignedData(result);
-    } on PlatformException catch (e) {
-      throw DnieError.fromPlatformException(e);
-    }
-  }
+  }) =>
+      _guard(() async {
+        final result = await api.readCertificate(
+          can,
+          pin,
+          timeout,
+          certificateType.value,
+        );
+        return _toSignedData(result);
+      });
 
   @override
-  Future<CardProbeResult> probeCard({int timeout = 30}) async {
-    try {
-      final result = await api.probeCard(timeout);
-      return CardProbeResult(
-        isValidDnie: result.isValidDnie,
-        atrHex: result.atrHex,
-        tagId: result.tagId,
-      );
-    } on PlatformException catch (e) {
-      throw DnieError.fromPlatformException(e);
-    }
-  }
+  Future<CardProbeResult> probeCard({int timeout = 30}) =>
+      _guard(() async {
+        final result = await api.probeCard(timeout);
+        return CardProbeResult(
+          isValidDnie: result.isValidDnie,
+          atrHex: result.atrHex,
+          tagId: result.tagId,
+        );
+      });
 
   @override
   Future<CertificateInfo> readCertificateDetails({
@@ -80,19 +73,16 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
     required String pin,
     int timeout = 30,
     DnieCertificateType certificateType = DnieCertificateType.sign,
-  }) async {
-    try {
-      final result = await api.readCertificateDetails(
-        can,
-        pin,
-        timeout,
-        certificateType.value,
-      );
-      return _toCertificateInfo(result);
-    } on PlatformException catch (e) {
-      throw DnieError.fromPlatformException(e);
-    }
-  }
+  }) =>
+      _guard(() async {
+        final result = await api.readCertificateDetails(
+          can,
+          pin,
+          timeout,
+          certificateType.value,
+        );
+        return _toCertificateInfo(result);
+      });
 
   @override
   Future<PersonalData> readPersonalData({
@@ -100,26 +90,23 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
     required String pin,
     int timeout = 30,
     DnieCertificateType certificateType = DnieCertificateType.sign,
-  }) async {
-    try {
-      final result = await api.readPersonalData(
-        can,
-        pin,
-        timeout,
-        certificateType.value,
-      );
-      return PersonalData(
-        fullName: result.fullName,
-        givenName: result.givenName,
-        surnames: result.surnames,
-        nif: result.nif,
-        country: result.country,
-        certificateType: result.certificateType,
-      );
-    } on PlatformException catch (e) {
-      throw DnieError.fromPlatformException(e);
-    }
-  }
+  }) =>
+      _guard(() async {
+        final result = await api.readPersonalData(
+          can,
+          pin,
+          timeout,
+          certificateType.value,
+        );
+        return PersonalData(
+          fullName: result.fullName,
+          givenName: result.givenName,
+          surnames: result.surnames,
+          nif: result.nif,
+          country: result.country,
+          certificateType: result.certificateType,
+        );
+      });
 
   @override
   Future<void> verifyPin({
@@ -127,26 +114,18 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
     required String pin,
     int timeout = 30,
     DnieCertificateType certificateType = DnieCertificateType.sign,
-  }) async {
-    try {
-      await api.verifyPin(can, pin, timeout, certificateType.value);
-    } on PlatformException catch (e) {
-      throw DnieError.fromPlatformException(e);
-    }
-  }
+  }) =>
+      _guard(() => api.verifyPin(can, pin, timeout, certificateType.value));
 
   @override
-  Future<NfcStatus> checkNfcAvailability() async {
-    try {
-      final result = await api.checkNfcAvailability();
-      return NfcStatus(
-        isAvailable: result.isAvailable,
-        isEnabled: result.isEnabled,
-      );
-    } on PlatformException catch (e) {
-      throw DnieError.fromPlatformException(e);
-    }
-  }
+  Future<NfcStatus> checkNfcAvailability() =>
+      _guard(() async {
+        final result = await api.checkNfcAvailability();
+        return NfcStatus(
+          isAvailable: result.isAvailable,
+          isEnabled: result.isEnabled,
+        );
+      });
 
   SignedData _toSignedData(DnieSignedDataMessage message) => SignedData(
         signedData: message.signedData,

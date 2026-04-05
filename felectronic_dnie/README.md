@@ -7,23 +7,31 @@ A Flutter plugin for reading and signing with the Spanish electronic DNIe (Docum
 
 ## Features
 
-- **NFC Availability** - Check if NFC hardware is available and enabled
-- **Probe Card** - Detect if an NFC card is a valid DNIe (no PIN required)
-- **Verify PIN** - Validate CAN + PIN credentials without signing
-- **Sign Data** - Sign arbitrary bytes with the DNIe private key
-- **Read Certificate** - Read the raw signing or authentication certificate
-- **Certificate Details** - Parse X.509 subject, issuer, validity, and serial
-- **Personal Data** - Extract name, NIF, country from the certificate
-- **Certificate Type Selection** - Choose between SIGN (FIRMA) and AUTH (AUTENTICACION)
+- **NFC Availability** -- check if NFC hardware is available and enabled
+- **Probe Card** -- detect if an NFC card is a valid DNIe (no PIN required)
+- **Verify PIN** -- validate CAN + PIN credentials without signing
+- **Sign Data** -- sign arbitrary bytes with the DNIe private key
+- **Read Certificate** -- read the raw signing or authentication certificate
+- **Certificate Details** -- parse X.509 subject, issuer, validity, and serial
+- **Personal Data** -- extract name, NIF, country from the certificate
+- **Certificate Type Selection** -- choose between SIGN (FIRMA) and AUTH (AUTENTICACION)
+- **DnieSession** -- store credentials once and reuse for multiple operations
+- **Workflows** -- `checkReadiness`, `readFullIdentity`, `probeAndSign`
+- **Validators** -- CAN and PIN format validation via string extensions
+- **Model Extensions** -- convenience helpers on all result types
 
 ## Usage
 
 ```dart
 import 'package:felectronic_dnie/felectronic_dnie.dart';
+```
 
+### Basic Operations
+
+```dart
 // Check NFC availability
 final nfc = await checkNfcAvailability();
-if (!nfc.isEnabled) print('NFC is not available');
+if (!nfc.isReady) print(nfc.statusMessage);
 
 // Probe card (no PIN required)
 final probe = await probeCard();
@@ -39,20 +47,136 @@ final signed = await sign(
   pin: 'mySecurePin',
 );
 
-// Read AUTH certificate for identity authentication
+// Read AUTH certificate
 final authCert = await readCertificate(
   can: '123456',
   pin: 'mySecurePin',
   certificateType: DnieCertificateType.auth,
 );
 
-// Read personal data from AUTH certificate
+// Read personal data
 final data = await readPersonalData(
   can: '123456',
   pin: 'mySecurePin',
-  certificateType: DnieCertificateType.auth,
 );
 print('Name: ${data.fullName}, NIF: ${data.nif}');
+```
+
+### DnieSession
+
+Store CAN and PIN once to avoid repeating them. Validates credential format on construction.
+
+```dart
+final session = DnieSession(
+  can: '123456',
+  pin: 'mySecurePin',
+  certificateType: DnieCertificateType.sign, // optional, default
+  timeout: 30, // optional, default
+);
+
+final signed = await session.sign(myData);
+final info = await session.certificateDetails();
+final personal = await session.personalData();
+await session.verifyCredentials();
+await session.stop(); // cancel in-progress NFC operation
+```
+
+### Workflows
+
+#### checkReadiness
+
+Performs a full readiness check: NFC availability, card probe, and PIN verification. Never throws -- captures errors into the result.
+
+```dart
+final readiness = await checkReadiness(can: '123456', pin: 'mySecurePin');
+
+if (readiness.isReady) {
+  print('Card is ready for operations');
+} else {
+  if (!readiness.nfcStatus.isAvailable) print('No NFC hardware');
+  if (!readiness.nfcStatus.isEnabled) print('NFC is disabled');
+  if (!readiness.isValidDnie) print('Not a DNIe card');
+  if (!readiness.isPinCorrect) print('Wrong CAN or PIN');
+  if (readiness.error != null) print('Error: ${readiness.error!.message}');
+}
+```
+
+#### readFullIdentity
+
+Reads both personal data and certificate details in sequence. Note: this requires two NFC taps.
+
+```dart
+final identity = await readFullIdentity(
+  can: '123456',
+  pin: 'mySecurePin',
+);
+print('${identity.fullName} - ${identity.nif}');
+print('Valid: ${identity.isValid}');
+print('Expiry: ${identity.certificateInfo.expiryStatus}');
+```
+
+#### probeAndSign
+
+Probes the card first, then signs only if it is a valid DNIe. Returns `null` if the card is not valid.
+
+```dart
+final result = await probeAndSign(
+  data: utf8.encode('Sign this'),
+  can: '123456',
+  pin: 'mySecurePin',
+);
+if (result == null) {
+  print('Card is not a valid DNIe');
+}
+```
+
+### Input Validators
+
+String extensions for validating CAN and PIN input in forms:
+
+```dart
+// CAN validation (must be exactly 6 digits)
+'123456'.isValidCan;         // true
+final canError = input.validateCan(); // null or error message
+
+// PIN validation (8-16 characters)
+'mySecurePin'.isValidPin;    // true
+final pinError = input.validatePin(); // null or error message
+```
+
+### Model Extensions
+
+#### NfcStatusX
+
+```dart
+nfc.isReady;        // isAvailable && isEnabled
+nfc.statusMessage;  // human-readable status
+```
+
+#### CertificateInfoX
+
+```dart
+info.daysUntilExpiry;   // days remaining (negative if expired)
+info.isExpiringSoon;    // expires within 30 days
+info.isValidForSigning; // currently valid and not expired
+info.expiryStatus;      // "Expires in 45 days", "Expired", etc.
+```
+
+#### SignedDataX
+
+```dart
+signed.hasSignature;      // signedData bytes present
+signed.hasCertificate;    // certificate string present
+signed.isComplete;        // both present
+signed.signatureSizeBytes; // byte count
+```
+
+#### PersonalDataX
+
+```dart
+data.initials;      // "J.G."
+data.isSigningCert; // FIRMA certificate
+data.isAuthCert;    // AUTENTICACION certificate
 ```
 
 ## Certificate Types
@@ -64,11 +188,27 @@ print('Name: ${data.fullName}, NIF: ${data.nif}');
 
 ## Error Handling
 
-All operations throw typed `DnieError` subclasses. The `DnieWrongPinError` includes a `remainingRetries` count:
+All operations throw typed `DnieError` subclasses:
+
+| Error | Description |
+|-------|-------------|
+| `DnieTimeoutError` | NFC scan timed out |
+| `DnieWrongPinError` | Incorrect PIN (check `remainingRetries`) |
+| `DnieWrongCanError` | Incorrect CAN |
+| `DnieLockedPinError` | PIN locked after too many attempts |
+| `DnieNotDnieError` | Card is not a DNIe |
+| `DnieDamagedError` | Card is physically damaged |
+| `DnieExpiredCertificateError` | Certificate has expired |
+| `DnieUnderageError` | Underage document, signing not available |
+| `DnieConnectionError` | NFC connection lost |
+| `DnieProviderError` | Failed to create cryptographic provider |
+| `DniePrivateKeyError` | Failed to access private key |
+| `DnieSigningError` | Signing operation failed |
+| `DnieCardTagError` | Could not read NFC tag |
 
 ```dart
 try {
-  await verifyPin(can: myCan, pin: myPin);
+  await sign(data: myData, can: myCan, pin: myPin);
 } on DnieWrongPinError catch (e) {
   print('Wrong PIN. ${e.remainingRetries} retries left.');
 } on DnieLockedPinError {
@@ -78,7 +218,7 @@ try {
 }
 ```
 
-See the [root README](../README.md) for full API documentation, platform setup, and error reference.
+See the [root README](../README.md) for platform setup instructions and the full monorepo overview.
 
 [license_badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [license_link]: https://opensource.org/licenses/MIT

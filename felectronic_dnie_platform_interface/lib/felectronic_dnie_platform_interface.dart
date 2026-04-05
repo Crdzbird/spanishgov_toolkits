@@ -10,6 +10,8 @@ import 'package:felectronic_dnie_platform_interface/src/models/personal_data.dar
 import 'package:felectronic_dnie_platform_interface/src/models/signed_data.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
+export 'package:felectronic_x509/felectronic_x509.dart';
+
 export 'src/errors/dnie_error.dart';
 export 'src/generated/messages.g.dart';
 export 'src/models/card_probe_result.dart';
@@ -18,6 +20,8 @@ export 'src/models/dnie_certificate_type.dart';
 export 'src/models/nfc_status.dart';
 export 'src/models/personal_data.dart';
 export 'src/models/signed_data.dart';
+export 'src/utils/dnie_validators.dart';
+export 'src/utils/model_extensions.dart';
 
 /// {@template felectronic_dnie_platform}
 /// The interface that implementations of felectronic_dnie must implement.

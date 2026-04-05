@@ -23,3 +23,11 @@ plugins {
 }
 
 include(":app")
+
+// CertificateSigner AAR module for felectronic_certificates_android.
+// Resolve relative to this settings file: android/ -> ../../ -> monorepo root
+val certSignerDir = file("../../../felectronic_certificates_android/android/certificate-signer")
+if (certSignerDir.exists()) {
+    include(":certificate-signer")
+    project(":certificate-signer").projectDir = certSignerDir
+}

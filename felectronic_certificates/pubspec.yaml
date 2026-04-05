@@ -1,0 +1,34 @@
+name: felectronic_certificates
+description: >-
+  Flutter plugin for managing device-stored certificates (import, sign, list,
+  delete) on Android and iOS.
+version: 0.1.0+1
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        default_package: felectronic_certificates_android
+      ios:
+        default_package: felectronic_certificates_ios
+
+dependencies:
+  felectronic_certificates_android:
+    path: ../felectronic_certificates_android
+  felectronic_certificates_ios:
+    path: ../felectronic_certificates_ios
+  felectronic_certificates_platform_interface:
+    path: ../felectronic_certificates_platform_interface
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.4
+  plugin_platform_interface: ^2.1.8
+  very_good_analysis: ^10.2.0

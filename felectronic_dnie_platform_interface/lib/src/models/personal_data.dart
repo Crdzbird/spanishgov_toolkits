@@ -37,11 +37,22 @@ class PersonalData {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is PersonalData &&
+          other.fullName == fullName &&
+          other.givenName == givenName &&
+          other.surnames == surnames &&
           other.nif == nif &&
-          other.fullName == fullName;
+          other.country == country &&
+          other.certificateType == certificateType;
 
   @override
-  int get hashCode => Object.hash(nif, fullName);
+  int get hashCode => Object.hash(
+        fullName,
+        givenName,
+        surnames,
+        nif,
+        country,
+        certificateType,
+      );
 
   @override
   String toString() => 'PersonalData('

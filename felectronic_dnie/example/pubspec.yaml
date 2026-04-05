@@ -1,5 +1,5 @@
 name: felectronic_dnie_example
-description: Demonstrates how to use the felectronic_dnie plugin.
+description: Demonstrates how to use the felectronic_dnie plugin suite.
 version: 0.1.0+1
 publish_to: none
 
@@ -7,6 +7,10 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  felectronic_certificates:
+    path: ../../felectronic_certificates
+  felectronic_clave:
+    path: ../../felectronic_clave
   felectronic_dnie:
     path: ../
   flutter:

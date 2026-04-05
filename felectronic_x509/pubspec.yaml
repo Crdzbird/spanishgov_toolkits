@@ -1,0 +1,11 @@
+name: felectronic_x509
+description: Pure Dart X.509 certificate parser for DER-encoded bytes.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.4.0
+
+dev_dependencies:
+  test: ^1.25.0
+  very_good_analysis: ^6.0.0

@@ -41,7 +41,12 @@ sealed class DnieError implements Exception {
   static int _parseRetries(String? message) {
     if (message == null) return -1;
     final match = RegExp(r'(\d+)').firstMatch(message);
-    return match != null ? int.parse(match.group(1)!) : -1;
+    if (match == null) return -1;
+    try {
+      return int.parse(match.group(1)!);
+    } on FormatException {
+      return -1;
+    }
   }
 
   @override

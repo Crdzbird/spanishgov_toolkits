@@ -1,237 +1,167 @@
 # felectronic_dnie
 
-A Flutter plugin for reading and signing with the Spanish electronic DNIe (Documento Nacional de Identidad electronico) via NFC.
+A suite of Flutter packages for building Spanish government-facing applications. Covers NFC-based DNIe signing, Cl@ve OAuth authentication, and device certificate management.
 
 [![style: very good analysis][very_good_analysis_badge]][very_good_analysis_link]
 [![License: MIT][license_badge]][license_link]
 
-## Features
+## Packages
 
-| Feature | Description | Requires PIN |
-|---------|------------|:---:|
-| **NFC Availability** | Check if device has NFC and if it's enabled | No |
-| **Probe Card** | Detect if an NFC card is a valid DNIe | No |
-| **Verify PIN** | Validate CAN + PIN without signing | Yes |
-| **Sign Data** | Sign arbitrary data with the DNIe private key | Yes |
-| **Read Certificate** | Read the raw signing or auth certificate | Yes |
-| **Certificate Details** | Parse X.509 certificate fields (subject, issuer, validity) | Yes |
-| **Personal Data** | Extract name, NIF, country from the certificate | Yes |
-| **Stop Scan** | Cancel an in-progress NFC operation | No |
+| Package | Description | Version |
+|---------|-------------|---------|
+| [`felectronic_dnie`](felectronic_dnie/) | NFC operations with the Spanish electronic DNIe | 0.1.0 |
+| [`felectronic_clave`](felectronic_clave/) | Cl@ve OAuth/OIDC authentication for Spanish government services | 0.1.0 |
+| [`felectronic_certificates`](felectronic_certificates/) | Device certificate management (import, sign, list, delete) | 0.1.0 |
 
-### Certificate Types
-
-The Spanish DNIe contains **two certificates**:
-
-| Type | Enum | Use Case |
-|------|------|----------|
-| **FIRMA** (Signing) | `DnieCertificateType.sign` | Non-repudiation digital signatures |
-| **AUTENTICACION** (Auth) | `DnieCertificateType.auth` | Identity authentication (Cl@ve, Sede Electronica) |
-
-All certificate-dependent operations accept a `certificateType` parameter (defaults to `.sign`).
+Each package can be used independently.
 
 ## Platform Support
 
-| Android | iOS |
-|:-------:|:---:|
-| API 24+ | iOS 13+ |
+| Package | Android | iOS |
+|---------|:-------:|:---:|
+| `felectronic_dnie` | API 24+ | iOS 13+ |
+| `felectronic_clave` | API 24+ | iOS 13+ |
+| `felectronic_certificates` | API 28+ | iOS 13+ |
 
-## Installation
+## Quick Start
+
+### felectronic_dnie -- NFC DNIe
+
+Read, sign, and verify identity with the Spanish electronic DNIe via NFC.
 
 ```yaml
 dependencies:
-  felectronic_dnie: ^1.0.0
+  felectronic_dnie: ^0.1.0
 ```
-
-### iOS Setup
-
-Add NFC capabilities to your iOS project:
-
-1. Enable **Near Field Communication Tag Reading** in your target's Signing & Capabilities.
-2. Add to `Info.plist`:
-
-```xml
-<key>NFCReaderUsageDescription</key>
-<string>This app uses NFC to read your DNIe card.</string>
-<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
-<array>
-  <string>A0000000049900</string>
-</array>
-```
-
-### Android Setup
-
-Add to `AndroidManifest.xml`:
-
-```xml
-<uses-permission android:name="android.permission.NFC" />
-<uses-feature android:name="android.hardware.nfc" android:required="true" />
-```
-
-## Usage
 
 ```dart
 import 'package:felectronic_dnie/felectronic_dnie.dart';
-```
 
-### Check NFC Availability
-
-Check if NFC is available before showing NFC-related UI:
-
-```dart
+// Check NFC availability
 final nfc = await checkNfcAvailability();
-if (!nfc.isAvailable) {
-  print('This device does not have NFC.');
-} else if (!nfc.isEnabled) {
-  print('NFC is disabled. Enable it in Settings.');
-}
-```
+if (!nfc.isReady) print(nfc.statusMessage);
 
-### Probe Card (No PIN Required)
-
-Check if an NFC card is a valid Spanish DNIe before asking for credentials:
-
-```dart
+// Probe card (no PIN required)
 final probe = await probeCard();
 if (probe.isValidDnie) {
-  print('Valid DNIe detected! Tag ID: ${probe.tagId}');
-} else {
-  print('Not a DNIe. ATR: ${probe.atrHex}');
+  // Sign data
+  final result = await sign(
+    data: utf8.encode('Hello, DNIe!'),
+    can: '123456',
+    pin: 'mySecurePin',
+  );
 }
+
+// Or use DnieSession for repeated operations
+final session = DnieSession(can: '123456', pin: 'mySecurePin');
+final identity = await readFullIdentity(
+  can: '123456', pin: 'mySecurePin',
+);
+print('${identity.fullName} - ${identity.nif}');
 ```
 
-### Verify PIN
+See the [felectronic_dnie README](felectronic_dnie/README.md) for full documentation.
 
-Validate the user's CAN and PIN without performing any signing:
+### felectronic_clave -- Cl@ve Authentication
+
+OAuth/OIDC authentication via Spain's Cl@ve identity system (Cl@ve PIN, Permanente, Movil, Electronic Certificate, eIDAS).
+
+```yaml
+dependencies:
+  felectronic_clave: ^0.1.0
+```
 
 ```dart
-try {
-  await verifyPin(can: '123456', pin: 'mySecurePin');
-  print('Credentials are valid!');
-} on DnieWrongPinError catch (e) {
-  print('Wrong PIN. ${e.remainingRetries} retries remaining.');
-} on DnieWrongCanError {
-  print('Wrong CAN.');
+import 'package:felectronic_clave/felectronic_clave.dart';
+
+final config = ClaveConfig(
+  discoveryUrl: 'https://auth-api.redsara.es/.../openid-configuration',
+  clientId: 'my-client-id',
+  redirectUri: 'com.example.app://login-callback',
+  clientSecret: 'my-secret',
+  userInfoUrl: 'https://auth-api.redsara.es/.../userinfo',
+  logoutUrl: 'https://auth-api.redsara.es/.../logout',
+);
+
+final repo = ClaveRepository(config);
+final result = await repo.login(method: ClaveAuthMethod.clavePin);
+print(result.accessToken);
+```
+
+See the [felectronic_clave README](felectronic_clave/README.md) for full documentation.
+
+### felectronic_certificates -- Device Certificates
+
+Import, sign with, list, and delete PKCS#12 certificates stored in the Android KeyStore or iOS Keychain.
+
+```yaml
+dependencies:
+  felectronic_certificates: ^0.1.0
+```
+
+```dart
+import 'package:felectronic_certificates/felectronic_certificates.dart';
+
+// Import a PKCS#12 file
+await importCertificate(pkcs12Bytes, password: 'cert-password');
+
+// List all certificates
+final certs = await getAllCertificates();
+for (final cert in certs) {
+  print('${cert.displayName} - ${cert.expiryStatus}');
 }
+
+// Sign data with the default certificate
+final signature = await signWithDefaultCertificate(myData);
 ```
 
-### Sign Data
-
-```dart
-import 'dart:convert';
-
-// Sign with the FIRMA certificate (default)
-final result = await sign(
-  data: utf8.encode('Hello, DNIe!'),
-  can: '123456',
-  pin: 'mySecurePin',
-);
-
-// Sign with the AUTH certificate
-final authResult = await sign(
-  data: utf8.encode('Auth challenge'),
-  can: '123456',
-  pin: 'mySecurePin',
-  certificateType: DnieCertificateType.auth,
-);
-```
-
-### Read Certificate
-
-Read the raw certificate (SIGN or AUTH):
-
-```dart
-// Read the SIGN certificate
-final signCert = await readCertificate(can: '123456', pin: 'mySecurePin');
-
-// Read the AUTH certificate
-final authCert = await readCertificate(
-  can: '123456',
-  pin: 'mySecurePin',
-  certificateType: DnieCertificateType.auth,
-);
-```
-
-### Certificate Details
-
-Parse X.509 certificate metadata:
-
-```dart
-final info = await readCertificateDetails(
-  can: '123456',
-  pin: 'mySecurePin',
-  certificateType: DnieCertificateType.auth,
-);
-print('Subject: ${info.subjectCommonName}');
-print('NIF: ${info.subjectSerialNumber}');
-print('Issuer: ${info.issuerCommonName} (${info.issuerOrganization})');
-print('Valid: ${info.notValidBefore} - ${info.notValidAfter}');
-print('Currently valid: ${info.isCurrentlyValid}');
-```
-
-### Personal Data
-
-Extract identity information from the certificate subject:
-
-```dart
-final data = await readPersonalData(can: '123456', pin: 'mySecurePin');
-print('Name: ${data.fullName}');
-print('NIF: ${data.nif}');
-print('Country: ${data.country}');
-print('Type: ${data.certificateType}'); // FIRMA or AUTENTICACION
-```
-
-### Stop Scan
-
-Cancel an in-progress NFC operation:
-
-```dart
-await stopSign();
-```
-
-## Error Handling
-
-All operations throw typed [DnieError] subclasses:
-
-| Error | Description |
-|-------|------------|
-| `DnieTimeoutError` | NFC scan timed out |
-| `DnieWrongPinError` | Incorrect PIN (check `remainingRetries`) |
-| `DnieWrongCanError` | Incorrect CAN |
-| `DnieLockedPinError` | PIN locked after too many attempts |
-| `DnieNotDnieError` | Card is not a DNIe |
-| `DnieDamagedError` | Card is physically damaged |
-| `DnieExpiredCertificateError` | Certificate has expired |
-| `DnieUnderageError` | Underage document, signing not available |
-| `DnieConnectionError` | NFC connection lost |
-| `DnieProviderError` | Failed to create cryptographic provider |
-| `DniePrivateKeyError` | Failed to access private key |
-| `DnieSigningError` | Signing operation failed |
-| `DnieCardTagError` | Could not read NFC tag |
-
-```dart
-try {
-  await sign(data: myData, can: myCan, pin: myPin);
-} on DnieWrongPinError catch (e) {
-  print('Wrong PIN. ${e.remainingRetries} retries remaining.');
-} on DnieLockedPinError {
-  print('Card is locked!');
-} on DnieError catch (e) {
-  print('DNIe error: ${e.message}');
-}
-```
+See the [felectronic_certificates README](felectronic_certificates/README.md) for full documentation.
 
 ## Architecture
 
-This is a federated Flutter plugin with the following packages:
+```
+felectronic_dnie/                  <-- App-facing DNIe plugin
+  felectronic_dnie_platform_interface/  <-- Platform interface + models
+  felectronic_dnie_android/             <-- Android implementation (Pigeon)
+  felectronic_dnie_ios/                 <-- iOS implementation (Pigeon)
 
-| Package | Description |
-|---------|------------|
-| [`felectronic_dnie`](felectronic_dnie/) | App-facing API |
-| [`felectronic_dnie_platform_interface`](felectronic_dnie_platform_interface/) | Platform interface |
-| [`felectronic_dnie_android`](felectronic_dnie_android/) | Android implementation |
-| [`felectronic_dnie_ios`](felectronic_dnie_ios/) | iOS implementation |
+felectronic_certificates/          <-- App-facing certificates plugin
+  felectronic_certificates_platform_interface/
+  felectronic_certificates_android/     <-- Android (AAR + Pigeon)
+  felectronic_certificates_ios/         <-- iOS (Keychain + Pigeon)
 
-Platform communication uses [Pigeon](https://pub.dev/packages/pigeon) for type-safe bindings.
+felectronic_clave/                 <-- Pure Dart (no native code)
+```
+
+All native platform communication uses [Pigeon](https://pub.dev/packages/pigeon) for type-safe bindings.
+
+## Development
+
+### Prerequisites
+
+- Flutter 3.22+
+- Dart 3.4+
+- Android: API 24+ (28+ for certificates)
+- iOS: 13+
+
+### Running Tests
+
+```bash
+# Run tests for a specific package
+cd felectronic_dnie && flutter test
+cd felectronic_clave && flutter test
+cd felectronic_certificates && flutter test
+```
+
+### Regenerating Pigeon Bindings
+
+```bash
+cd felectronic_dnie_platform_interface
+dart run pigeon --input pigeons/messages.dart
+
+cd felectronic_certificates_platform_interface
+dart run pigeon --input pigeons/messages.dart
+```
 
 [license_badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [license_link]: https://opensource.org/licenses/MIT

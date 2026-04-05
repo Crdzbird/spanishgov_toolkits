@@ -1,0 +1,9 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+linter:
+  rules:
+    public_member_api_docs: false
+    # All model classes have final fields and const constructors.
+    # The @immutable annotation requires package:meta which
+    # conflicts with Flutter SDK's pinned version.
+    avoid_equals_and_hash_code_on_mutable_classes: false

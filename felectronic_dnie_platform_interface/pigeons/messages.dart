@@ -3,7 +3,6 @@ import 'package:pigeon/pigeon.dart';
 @ConfigurePigeon(
   PigeonOptions(
     dartOut: 'lib/src/generated/messages.g.dart',
-    dartTestOut: 'test/src/generated/test_messages.g.dart',
     kotlinOut:
         '../felectronic_dnie_android/android/src/main/kotlin/es/gob/electronic_dnie/Messages.g.kt',
     kotlinOptions: KotlinOptions(package: 'es.gob.electronic_dnie'),

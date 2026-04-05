@@ -1,0 +1,20 @@
+name: felectronic_certificates_platform_interface
+description: A common platform interface for the felectronic_certificates plugin.
+version: 0.1.0+1
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  felectronic_x509:
+    path: ../felectronic_x509
+  flutter:
+    sdk: flutter
+  plugin_platform_interface: ^2.1.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  pigeon: ^26.3.3
+  very_good_analysis: ^10.2.0

@@ -53,11 +53,24 @@ class CertificateInfo {
       other is CertificateInfo &&
           other.subjectCommonName == subjectCommonName &&
           other.subjectSerialNumber == subjectSerialNumber &&
-          other.serialNumber == serialNumber;
+          other.issuerCommonName == issuerCommonName &&
+          other.issuerOrganization == issuerOrganization &&
+          other.notValidBefore == notValidBefore &&
+          other.notValidAfter == notValidAfter &&
+          other.serialNumber == serialNumber &&
+          other.isCurrentlyValid == isCurrentlyValid;
 
   @override
-  int get hashCode =>
-      Object.hash(subjectCommonName, subjectSerialNumber, serialNumber);
+  int get hashCode => Object.hash(
+        subjectCommonName,
+        subjectSerialNumber,
+        issuerCommonName,
+        issuerOrganization,
+        notValidBefore,
+        notValidAfter,
+        serialNumber,
+        isCurrentlyValid,
+      );
 
   @override
   String toString() => 'CertificateInfo('

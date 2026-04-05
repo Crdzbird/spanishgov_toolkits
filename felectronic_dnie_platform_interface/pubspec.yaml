@@ -7,6 +7,8 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  felectronic_x509:
+    path: ../felectronic_x509
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.1.8
@@ -14,5 +16,5 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  pigeon: ^25.3.0
+  pigeon: ^26.3.3
   very_good_analysis: ^10.2.0
