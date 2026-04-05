@@ -10,6 +10,7 @@ topics:
   - platform-interface
 
 environment:
+  flutter: ">=3.22.0"
   sdk: ^3.11.0
 
 dependencies:

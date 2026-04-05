@@ -13,6 +13,7 @@ topics:
   - keychain
 
 environment:
+  flutter: ">=3.22.0"
   sdk: ^3.11.0
 
 flutter:
