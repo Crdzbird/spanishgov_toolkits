@@ -22,8 +22,7 @@ flutter:
         dartPluginClass: FelectronicCertificatesIOS
 
 dependencies:
-  felectronic_certificates_platform_interface:
-    path: ../felectronic_certificates_platform_interface
+  felectronic_certificates_platform_interface: ^1.0.0
   flutter:
     sdk: flutter
 

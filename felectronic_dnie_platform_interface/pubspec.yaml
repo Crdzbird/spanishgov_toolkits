@@ -14,8 +14,8 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
-  felectronic_x509:
-    path: ../felectronic_x509
+  meta: ^1.7.0
+  felectronic_x509: ^1.0.0
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.1.8

@@ -23,8 +23,7 @@ flutter:
         dartPluginClass: FelectronicDnieAndroid
 
 dependencies:
-  felectronic_dnie_platform_interface:
-    path: ../felectronic_dnie_platform_interface
+  felectronic_dnie_platform_interface: ^1.0.0
   flutter:
     sdk: flutter
 
