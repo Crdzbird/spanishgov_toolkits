@@ -26,12 +26,10 @@ class ClaveTokenStorage {
       _storage.write(key: _accessTokenKey, value: accessToken);
 
   /// Reads the stored access token, or `null` if not set.
-  Future<String?> getAccessToken() =>
-      _storage.read(key: _accessTokenKey);
+  Future<String?> getAccessToken() => _storage.read(key: _accessTokenKey);
 
   /// Deletes the stored access token.
-  Future<void> deleteAccessToken() =>
-      _storage.delete(key: _accessTokenKey);
+  Future<void> deleteAccessToken() => _storage.delete(key: _accessTokenKey);
 
   // --- Refresh Token ---
 
@@ -40,35 +38,40 @@ class ClaveTokenStorage {
       _storage.write(key: _refreshTokenKey, value: refreshToken);
 
   /// Reads the stored refresh token, or `null` if not set.
-  Future<String?> getRefreshToken() =>
-      _storage.read(key: _refreshTokenKey);
+  Future<String?> getRefreshToken() => _storage.read(key: _refreshTokenKey);
 
   /// Deletes the stored refresh token.
-  Future<void> deleteRefreshToken() =>
-      _storage.delete(key: _refreshTokenKey);
+  Future<void> deleteRefreshToken() => _storage.delete(key: _refreshTokenKey);
 
   // --- Backup Tokens (for LOA elevation) ---
 
   /// Backs up the current tokens before attempting a higher LOA login.
   Future<void> backupTokens() async {
-    final access = await getAccessToken();
-    final refresh = await getRefreshToken();
+    final results = await Future.wait([getAccessToken(), getRefreshToken()]);
+    final access = results[0];
+    final refresh = results[1];
+    final writes = <Future<void>>[];
     if (access != null) {
-      await _storage.write(key: _backupAccessKey, value: access);
+      writes.add(_storage.write(key: _backupAccessKey, value: access));
     }
     if (refresh != null) {
-      await _storage.write(key: _backupRefreshKey, value: refresh);
+      writes.add(_storage.write(key: _backupRefreshKey, value: refresh));
     }
+    await Future.wait(writes);
   }
 
   /// Restores tokens from backup (after a failed LOA elevation).
   Future<void> restoreBackup() async {
-    final access = await _storage.read(key: _backupAccessKey);
-    final refresh = await _storage.read(key: _backupRefreshKey);
-    if (access != null) await saveAccessToken(access);
-    if (refresh != null) await saveRefreshToken(refresh);
-    await _storage.delete(key: _backupAccessKey);
-    await _storage.delete(key: _backupRefreshKey);
+    final result = await Future.wait<String?>([
+      _storage.read(key: _backupAccessKey),
+      _storage.read(key: _backupRefreshKey),
+    ]);
+    await Future.wait([
+      if (result[0] != null) saveAccessToken(result[0]!),
+      if (result[1] != null) saveRefreshToken(result[1]!),
+      _storage.delete(key: _backupAccessKey),
+      _storage.delete(key: _backupRefreshKey),
+    ]);
   }
 
   // --- Document (for Cl@ve Movil) ---
@@ -78,17 +81,16 @@ class ClaveTokenStorage {
       _storage.write(key: _documentKey, value: document);
 
   /// Reads the stored document identifier.
-  Future<String?> getDocument() =>
-      _storage.read(key: _documentKey);
+  Future<String?> getDocument() => _storage.read(key: _documentKey);
 
   // --- Clear All ---
 
   /// Deletes all tokens and cached data.
-  Future<void> clearAll() async {
-    await deleteAccessToken();
-    await deleteRefreshToken();
-    await _storage.delete(key: _backupAccessKey);
-    await _storage.delete(key: _backupRefreshKey);
-    await _storage.delete(key: _documentKey);
-  }
+  Future<void> clearAll() => Future.wait([
+        deleteAccessToken(),
+        deleteRefreshToken(),
+        _storage.delete(key: _backupAccessKey),
+        _storage.delete(key: _backupRefreshKey),
+        _storage.delete(key: _documentKey),
+      ]);
 }

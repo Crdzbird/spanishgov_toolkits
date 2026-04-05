@@ -76,7 +76,7 @@ class _DnieTabState extends State<_DnieTab>
   String _result = '';
   bool _busy = false;
   NfcStatus? _nfc;
-  DnieCertificateType _ct = DnieCertificateType.sign;
+  DnieCertificateType _certType = DnieCertificateType.sign;
 
   @override
   bool get wantKeepAlive => true;
@@ -96,7 +96,7 @@ class _DnieTabState extends State<_DnieTab>
     }
   }
 
-  String? _v({bool pin = true}) {
+  String? _validate({bool pin = true}) {
     final ce = _canCtl.text.trim().validateCan();
     if (ce != null) return ce;
     if (pin) {
@@ -129,6 +129,17 @@ class _DnieTabState extends State<_DnieTab>
       setState(() => _busy = false);
     }
   }
+
+  Future<void> _runValidated(
+    String loadingMsg,
+    Future<void> Function() action,
+  ) =>
+      _run(() async {
+        final error = _validate();
+        if (error != null) return setState(() => _status = error);
+        setState(() => _status = loadingMsg);
+        await action();
+      });
 
   @override
   void dispose() {
@@ -164,9 +175,9 @@ class _DnieTabState extends State<_DnieTab>
               icon: Icon(Icons.verified_user),
             ),
           ],
-          selected: {_ct},
+          selected: {_certType},
           onSelectionChanged: (s) =>
-              setState(() => _ct = s.first),
+              setState(() => _certType = s.first),
         ),
         const SizedBox(height: 16),
         TextField(
@@ -215,20 +226,15 @@ class _DnieTabState extends State<_DnieTab>
           busy: _busy,
           icon: Icons.lock_open,
           label: 'Verify PIN',
-          onPressed: () => _run(() async {
-            final e = _v();
-            if (e != null) {
-              return setState(() => _status = e);
-            }
-            setState(() => _status = 'Verifying...');
+          onPressed: () => _runValidated('Verifying...', () async {
             await verifyPin(
               can: _can,
               pin: _pin,
-              certificateType: _ct,
+              certificateType: _certType,
             );
             setState(() {
               _status = 'PIN verified!';
-              _result = '${_ct.value} cert OK.';
+              _result = '${_certType.value} cert OK.';
             });
           }),
         ),
@@ -236,20 +242,15 @@ class _DnieTabState extends State<_DnieTab>
           busy: _busy,
           icon: Icons.nfc,
           label: 'Sign Data',
-          onPressed: () => _run(() async {
-            final e = _v();
-            if (e != null) {
-              return setState(() => _status = e);
-            }
-            setState(() => _status = 'Signing...');
+          onPressed: () => _runValidated('Signing...', () async {
             final s = await sign(
               data: utf8.encode('Hello, DNIe!'),
               can: _can,
               pin: _pin,
-              certificateType: _ct,
+              certificateType: _certType,
             );
             setState(() {
-              _status = 'Signed (${_ct.value})!';
+              _status = 'Signed (${_certType.value})!';
               _result = 'Complete: ${s.isComplete}\n'
                   'Size: ${s.signatureSizeBytes} bytes';
             });
@@ -259,16 +260,11 @@ class _DnieTabState extends State<_DnieTab>
           busy: _busy,
           icon: Icons.badge,
           label: 'Read Certificate',
-          onPressed: () => _run(() async {
-            final e = _v();
-            if (e != null) {
-              return setState(() => _status = e);
-            }
-            setState(() => _status = 'Reading cert...');
+          onPressed: () => _runValidated('Reading cert...', () async {
             final c = await readCertificate(
               can: _can,
               pin: _pin,
-              certificateType: _ct,
+              certificateType: _certType,
             );
             setState(() {
               _status = 'Certificate read!';
@@ -282,16 +278,11 @@ class _DnieTabState extends State<_DnieTab>
           busy: _busy,
           icon: Icons.info_outline,
           label: 'Certificate Details',
-          onPressed: () => _run(() async {
-            final e = _v();
-            if (e != null) {
-              return setState(() => _status = e);
-            }
-            setState(() => _status = 'Reading details...');
+          onPressed: () => _runValidated('Reading details...', () async {
             final i = await readCertificateDetails(
               can: _can,
               pin: _pin,
-              certificateType: _ct,
+              certificateType: _certType,
             );
             setState(() {
               _status = i.expiryStatus;
@@ -309,16 +300,11 @@ class _DnieTabState extends State<_DnieTab>
           busy: _busy,
           icon: Icons.person,
           label: 'Personal Data',
-          onPressed: () => _run(() async {
-            final e = _v();
-            if (e != null) {
-              return setState(() => _status = e);
-            }
-            setState(() => _status = 'Reading data...');
+          onPressed: () => _runValidated('Reading data...', () async {
             final pd = await readPersonalData(
               can: _can,
               pin: _pin,
-              certificateType: _ct,
+              certificateType: _certType,
             );
             setState(() {
               _status = 'Personal data read!';
@@ -341,16 +327,11 @@ class _DnieTabState extends State<_DnieTab>
           label: 'Parse Full X.509',
           subtitle: 'Read cert + parse all fields',
           filled: false,
-          onPressed: () => _run(() async {
-            final e = _v();
-            if (e != null) {
-              return setState(() => _status = e);
-            }
-            setState(() => _status = 'Reading cert...');
+          onPressed: () => _runValidated('Reading cert...', () async {
             final c = await readCertificate(
               can: _can,
               pin: _pin,
-              certificateType: _ct,
+              certificateType: _certType,
             );
             final x = c.parsedCertificate;
             if (x == null) {
@@ -410,16 +391,11 @@ class _DnieTabState extends State<_DnieTab>
           label: 'Check Readiness',
           subtitle: 'NFC + Probe + PIN',
           filled: false,
-          onPressed: () => _run(() async {
-            final e = _v();
-            if (e != null) {
-              return setState(() => _status = e);
-            }
-            setState(() => _status = 'Checking...');
+          onPressed: () => _runValidated('Checking...', () async {
             final r = await checkReadiness(
               can: _can,
               pin: _pin,
-              certificateType: _ct,
+              certificateType: _certType,
             );
             setState(() {
               _status =
@@ -438,16 +414,11 @@ class _DnieTabState extends State<_DnieTab>
           label: 'Read Full Identity',
           subtitle: 'Personal + Certificate (2 taps)',
           filled: false,
-          onPressed: () => _run(() async {
-            final e = _v();
-            if (e != null) {
-              return setState(() => _status = e);
-            }
-            setState(() => _status = 'Reading...');
+          onPressed: () => _runValidated('Reading...', () async {
             final id = await readFullIdentity(
               can: _can,
               pin: _pin,
-              certificateType: _ct,
+              certificateType: _certType,
             );
             setState(() {
               _status = id.isValid
@@ -466,17 +437,12 @@ class _DnieTabState extends State<_DnieTab>
           label: 'Probe + Sign',
           subtitle: 'Probe card then sign if valid',
           filled: false,
-          onPressed: () => _run(() async {
-            final e = _v();
-            if (e != null) {
-              return setState(() => _status = e);
-            }
-            setState(() => _status = 'Probing...');
+          onPressed: () => _runValidated('Probing...', () async {
             final r = await probeAndSign(
               data: utf8.encode('Probe+Sign test'),
               can: _can,
               pin: _pin,
-              certificateType: _ct,
+              certificateType: _certType,
             );
             setState(() {
               if (r != null) {
@@ -499,18 +465,11 @@ class _DnieTabState extends State<_DnieTab>
           label: 'Session Demo',
           subtitle: 'Verify + Details + Personal',
           filled: false,
-          onPressed: () => _run(() async {
-            final e = _v();
-            if (e != null) {
-              return setState(() => _status = e);
-            }
+          onPressed: () => _runValidated('Verifying via session...', () async {
             final session = DnieSession(
               can: _can,
               pin: _pin,
-              certificateType: _ct,
-            );
-            setState(
-              () => _status = 'Verifying via session...',
+              certificateType: _certType,
             );
             await session.verifyCredentials();
             setState(
@@ -863,142 +822,114 @@ class _ClaveTabState extends State<_ClaveTab>
       children: [
         // --- Document Validator ---
         const _Section(title: 'Document Validator'),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: _docCtl,
-                  decoration: const InputDecoration(
-                    labelText: 'DNI or NIE',
-                    hintText: 'e.g. 12345678Z',
-                    border: OutlineInputBorder(),
-                  ),
-                  textCapitalization:
-                      TextCapitalization.characters,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: _validateDoc,
-                  icon: const Icon(Icons.check_circle),
-                  label: const Text('Validate'),
-                ),
-              ],
+        _CardSection(
+          children: [
+            TextField(
+              controller: _docCtl,
+              decoration: const InputDecoration(
+                labelText: 'DNI or NIE',
+                hintText: 'e.g. 12345678Z',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization:
+                  TextCapitalization.characters,
+              onChanged: (_) => setState(() {}),
             ),
-          ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: _validateDoc,
+              icon: const Icon(Icons.check_circle),
+              label: const Text('Validate'),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
 
         // --- Contrast Validator ---
         const _Section(title: 'Contrast Validator'),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: _contrastCtl,
-                  decoration: InputDecoration(
-                    labelText: _cLabel,
-                    hintText: _cHint,
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: _validateContrast,
-                  icon: const Icon(Icons.fact_check),
-                  label: const Text('Validate Contrast'),
-                ),
-              ],
+        _CardSection(
+          children: [
+            TextField(
+              controller: _contrastCtl,
+              decoration: InputDecoration(
+                labelText: _cLabel,
+                hintText: _cHint,
+                border: const OutlineInputBorder(),
+              ),
             ),
-          ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: _validateContrast,
+              icon: const Icon(Icons.fact_check),
+              label: const Text('Validate Contrast'),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
 
         // --- Support Number ---
         const _Section(title: 'Support Number'),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        _CardSection(
+          children: [
+            Text(
+              'Test values:',
+              style:
+                  Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
               children: [
-                Text(
-                  'Test values:',
-                  style:
-                      Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    _chip(context, 'C12345678', true),
-                    _chip(context, 'E12345678', true),
-                    _chip(context, 'A12345678', false),
-                    _chip(context, 'C1234567', false),
-                  ],
-                ),
+                _chip(context, 'C12345678', true),
+                _chip(context, 'E12345678', true),
+                _chip(context, 'A12345678', false),
+                _chip(context, 'C1234567', false),
               ],
             ),
-          ),
+          ],
         ),
         const SizedBox(height: 16),
 
         // --- Auth Methods ---
         const _Section(title: 'Cl@ve Auth Methods'),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: ClaveAuthMethod.values
-                  .map(
-                    (m) => ListTile(
-                      dense: true,
-                      leading: Icon(_icon(m)),
-                      title: Text(m.name),
-                      subtitle: Text('IDP: ${m.idpValue}'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
+        _CardSection(
+          children: ClaveAuthMethod.values
+              .map(
+                (m) => ListTile(
+                  dense: true,
+                  leading: Icon(_icon(m)),
+                  title: Text(m.name),
+                  subtitle: Text('IDP: ${m.idpValue}'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              )
+              .toList(),
         ),
         const SizedBox(height: 16),
 
         // --- LOA Levels ---
         const _Section(title: 'LOA Levels'),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: ClaveLoaLevel.values
-                  .map(
-                    (l) => ListTile(
-                      dense: true,
-                      leading: Icon(
-                        Icons.shield,
-                        color: switch (l) {
-                          ClaveLoaLevel.low => Colors.green,
-                          ClaveLoaLevel.medium =>
-                            Colors.orange,
-                          ClaveLoaLevel.high => Colors.red,
-                        },
-                      ),
-                      title: Text(
-                        '${l.name} (Level ${l.value})',
-                      ),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
+        _CardSection(
+          children: ClaveLoaLevel.values
+              .map(
+                (l) => ListTile(
+                  dense: true,
+                  leading: Icon(
+                    Icons.shield,
+                    color: switch (l) {
+                      ClaveLoaLevel.low => Colors.green,
+                      ClaveLoaLevel.medium =>
+                        Colors.orange,
+                      ClaveLoaLevel.high => Colors.red,
+                    },
+                  ),
+                  title: Text(
+                    '${l.name} (Level ${l.value})',
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              )
+              .toList(),
         ),
         const SizedBox(height: 24),
         _StatusCard(
@@ -1095,6 +1026,24 @@ class _ClaveTabState extends State<_ClaveTab>
 // Shared Widgets
 // =============================================================================
 
+class _CardSection extends StatelessWidget {
+  const _CardSection({required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: children,
+        ),
+      ),
+    );
+  }
+}
+
 class _Section extends StatelessWidget {
   const _Section({required this.title});
   final String title;
@@ -1102,7 +1051,7 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Text(
         title,
         style: Theme.of(context)
