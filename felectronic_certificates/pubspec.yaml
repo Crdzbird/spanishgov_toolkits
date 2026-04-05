@@ -25,12 +25,9 @@ flutter:
         default_package: felectronic_certificates_ios
 
 dependencies:
-  felectronic_certificates_android:
-    path: ../felectronic_certificates_android
-  felectronic_certificates_ios:
-    path: ../felectronic_certificates_ios
-  felectronic_certificates_platform_interface:
-    path: ../felectronic_certificates_platform_interface
+  felectronic_certificates_android: ^1.0.0
+  felectronic_certificates_ios: ^1.0.0
+  felectronic_certificates_platform_interface: ^1.0.0
   flutter:
     sdk: flutter
 
