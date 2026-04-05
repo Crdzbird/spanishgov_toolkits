@@ -3,6 +3,43 @@ import 'package:felectronic_clave/src/models/clave_auth_result.dart';
 import 'package:felectronic_clave/src/models/clave_mobile_session.dart';
 import 'package:felectronic_clave/src/utils/document_validator.dart';
 
+/// {@template clave_validation_error}
+/// Validation errors for Cl@ve document and contrast input.
+/// {@endtemplate}
+enum ClaveValidationError {
+  /// Document field is empty.
+  documentRequired('Document number is required.'),
+
+  /// Document does not match DNI or NIE format.
+  documentInvalidFormat('Enter a valid DNI or NIE.'),
+
+  /// Document format is correct but the check letter is wrong.
+  documentInvalidCheckLetter('Check letter is incorrect.'),
+
+  /// Validity date field is empty.
+  contrastDateRequired('Validity date is required.'),
+
+  /// Validity date does not match dd-MM-yyyy format.
+  contrastDateInvalid('Enter a valid date (dd-MM-yyyy).'),
+
+  /// Support number field is empty.
+  contrastSupportRequired('Support number is required.'),
+
+  /// Support number does not match C/E + 8 digits format.
+  contrastSupportInvalid(
+    'Enter a valid support number (C/E + 8 digits).',
+  );
+
+  /// {@macro clave_validation_error}
+  const ClaveValidationError(this.message);
+
+  /// Human-readable error message.
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 /// String extensions for document and contrast validation.
 extension ClaveStringValidators on String {
   /// Whether this string is a valid DNI.
@@ -29,34 +66,36 @@ extension ClaveStringValidators on String {
   bool get isValidContrastDate =>
       DocumentValidator.isValidContrastDate(this);
 
-  /// Returns an error message if this is not a valid document, or `null`.
-  String? validateDocument() {
+  /// Returns a [ClaveValidationError] if this is not a valid document,
+  /// or `null`.
+  ClaveValidationError? validateDocument() {
     final trimmed = trim();
-    if (trimmed.isEmpty) return 'Document number is required.';
+    if (trimmed.isEmpty) return ClaveValidationError.documentRequired;
     if (!DocumentValidator.isValid(trimmed)) {
-      // isValid already checks isDni/isNie format + check letter.
       final hasFormat =
           DocumentValidator.isDni(trimmed) || DocumentValidator.isNie(trimmed);
       return hasFormat
-          ? 'Check letter is incorrect.'
-          : 'Enter a valid DNI or NIE.';
+          ? ClaveValidationError.documentInvalidCheckLetter
+          : ClaveValidationError.documentInvalidFormat;
     }
     return null;
   }
 
-  /// Returns an error message for contrast, or `null`.
+  /// Returns a [ClaveValidationError] for contrast, or `null`.
+  ///
   /// [isDni] determines whether to validate as date or support number.
-  String? validateContrast({required bool isDni}) {
+  ClaveValidationError? validateContrast({required bool isDni}) {
     final trimmed = trim();
-    if (trimmed.isEmpty) {
-      return isDni ? 'Validity date is required.' : 'Support number '
-          'is required.';
-    }
-    if (isDni && !DocumentValidator.isValidContrastDate(trimmed)) {
-      return 'Enter a valid date (dd-MM-yyyy).';
-    }
-    if (!isDni && !DocumentValidator.isValidSupportNumber(trimmed)) {
-      return 'Enter a valid support number (C/E + 8 digits).';
+    if (isDni) {
+      if (trimmed.isEmpty) return ClaveValidationError.contrastDateRequired;
+      if (!DocumentValidator.isValidContrastDate(trimmed)) {
+        return ClaveValidationError.contrastDateInvalid;
+      }
+    } else {
+      if (trimmed.isEmpty) return ClaveValidationError.contrastSupportRequired;
+      if (!DocumentValidator.isValidSupportNumber(trimmed)) {
+        return ClaveValidationError.contrastSupportInvalid;
+      }
     }
     return null;
   }

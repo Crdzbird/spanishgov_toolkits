@@ -2,6 +2,7 @@ import 'package:felectronic_dnie_platform_interface/src/models/certificate_info.
 import 'package:felectronic_dnie_platform_interface/src/models/nfc_status.dart';
 import 'package:felectronic_dnie_platform_interface/src/models/personal_data.dart';
 import 'package:felectronic_dnie_platform_interface/src/models/signed_data.dart';
+import 'package:felectronic_dnie_platform_interface/src/utils/dnie_validators.dart';
 import 'package:felectronic_x509/felectronic_x509.dart';
 
 /// Convenience extensions on [CertificateInfo].
@@ -19,14 +20,22 @@ extension CertificateInfoX on CertificateInfo {
   bool get isValidForSigning =>
       isCurrentlyValid && !isExpired && !isNotYetValid;
 
-  /// Human-readable expiry status.
-  String get expiryStatus {
-    if (isNotYetValid) return 'Not yet valid';
-    if (isExpired) return 'Expired';
+  /// The structured expiry status as an enum value.
+  CertificateExpiryStatus get expiryStatusType {
+    if (isNotYetValid) return CertificateExpiryStatus.notYetValid;
+    if (isExpired) return CertificateExpiryStatus.expired;
     final days = daysUntilExpiry;
-    if (days == 0) return 'Expires today';
-    if (days == 1) return 'Expires tomorrow';
-    return 'Expires in $days days';
+    if (days == 0) return CertificateExpiryStatus.expiresToday;
+    if (days == 1) return CertificateExpiryStatus.expiresTomorrow;
+    return CertificateExpiryStatus.valid;
+  }
+
+  /// Human-readable expiry status string.
+  String get expiryStatus {
+    final type = expiryStatusType;
+    return type == CertificateExpiryStatus.valid
+        ? type.withDays(daysUntilExpiry)
+        : type.message;
   }
 }
 
@@ -63,12 +72,15 @@ extension NfcStatusX on NfcStatus {
   /// Whether NFC is available and enabled — ready for operations.
   bool get isReady => isAvailable && isEnabled;
 
-  /// Human-readable NFC status message.
-  String get statusMessage {
-    if (!isAvailable) return 'This device does not have NFC.';
-    if (!isEnabled) return 'NFC is disabled. Enable it in Settings.';
-    return 'NFC is ready.';
+  /// The structured NFC status as an enum value.
+  NfcStatusType get statusType {
+    if (!isAvailable) return NfcStatusType.unavailable;
+    if (!isEnabled) return NfcStatusType.disabled;
+    return NfcStatusType.ready;
   }
+
+  /// Human-readable NFC status message.
+  String get statusMessage => statusType.message;
 }
 
 /// Convenience extensions on [PersonalData].

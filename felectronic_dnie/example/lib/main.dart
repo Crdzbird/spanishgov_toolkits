@@ -98,10 +98,10 @@ class _DnieTabState extends State<_DnieTab>
 
   String? _validate({bool pin = true}) {
     final ce = _canCtl.text.trim().validateCan();
-    if (ce != null) return ce;
+    if (ce != null) return ce.message;
     if (pin) {
       final pe = _pinCtl.text.trim().validatePin();
-      if (pe != null) return pe;
+      if (pe != null) return pe.message;
     }
     return null;
   }
@@ -946,7 +946,7 @@ class _ClaveTabState extends State<_ClaveTab>
     final error = doc.validateDocument();
     if (error != null) {
       setState(() {
-        _status = error;
+        _status = error.message;
         _result = '';
       });
       return;
@@ -971,7 +971,7 @@ class _ClaveTabState extends State<_ClaveTab>
         contrast.validateContrast(isDni: isDni);
     if (error != null) {
       setState(() {
-        _status = error;
+        _status = error.message;
         _result = '';
       });
       return;

@@ -5,6 +5,7 @@ import 'package:felectronic_dnie_platform_interface/felectronic_dnie_platform_in
 export 'package:felectronic_dnie_platform_interface/felectronic_dnie_platform_interface.dart'
     show
         CardProbeResult,
+        CertificateExpiryStatus,
         CertificateInfo,
         CertificateInfoX,
         DnieCardTagError,
@@ -22,9 +23,11 @@ export 'package:felectronic_dnie_platform_interface/felectronic_dnie_platform_in
         DnieTimeoutError,
         DnieUnderageError,
         DnieUnknownError,
+        DnieValidationError,
         DnieWrongCanError,
         DnieWrongPinError,
         NfcStatus,
+        NfcStatusType,
         NfcStatusX,
         PersonalData,
         PersonalDataX,

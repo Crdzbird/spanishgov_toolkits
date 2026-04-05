@@ -27,9 +27,9 @@ class DnieSession {
   })  : _can = can.trim(),
         _pin = pin.trim() {
     final canError = _can.validateCan();
-    if (canError != null) throw ArgumentError(canError);
+    if (canError != null) throw ArgumentError(canError.message);
     final pinError = _pin.validatePin();
-    if (pinError != null) throw ArgumentError(pinError);
+    if (pinError != null) throw ArgumentError(pinError.message);
   }
 
   final String _can;
