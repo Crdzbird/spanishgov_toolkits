@@ -1,4 +1,6 @@
+/// {@template cert_key_usage}
 /// Key usage types for device-stored certificates.
+/// {@endtemplate}
 enum CertKeyUsage {
   /// The certificate can be used for digital signatures.
   signing('SIGNING'),

@@ -1,10 +1,12 @@
 import 'dart:convert';
 
+/// {@template jwt_parser}
 /// Lightweight JWT payload parser.
 ///
 /// Decodes the payload segment of a JWT token without
 /// performing signature verification. Use only for extracting
 /// claims from tokens already validated by the server.
+/// {@endtemplate}
 abstract final class JwtParser {
   /// Decodes the payload of a JWT [token] and returns it as a map.
   ///

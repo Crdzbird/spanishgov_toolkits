@@ -5,6 +5,7 @@ import 'package:felectronic_clave/src/errors/clave_error.dart';
 import 'package:felectronic_clave/src/models/clave_auth_result.dart';
 import 'package:felectronic_clave/src/models/clave_mobile_session.dart';
 
+/// {@template clave_mobile_poller}
 /// Stream-based polling for Cl@ve Movil validation.
 ///
 /// Replaces manual polling loops with a clean stream API:
@@ -21,6 +22,7 @@ import 'package:felectronic_clave/src/models/clave_mobile_session.dart';
 ///   }
 /// }
 /// ```
+/// {@endtemplate}
 class ClaveMobilePoller {
   /// Creates a poller backed by the given repository.
   ClaveMobilePoller(this._repository);
@@ -64,12 +66,14 @@ class ClaveMobilePoller {
       } on ClaveIdleError {
         yield ClavePollWaiting(elapsed.inSeconds);
       } on ClaveError catch (e) {
+        if (_cancelled) return;
         yield ClavePollError(e);
         return;
       }
 
       if (_cancelled) return;
       await Future<void>.delayed(interval);
+      if (_cancelled) return;
     }
   }
 

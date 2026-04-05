@@ -23,15 +23,11 @@ class SignedData {
   /// `base64certificate` (String).
   factory SignedData.fromMap(Map<String, dynamic> map) {
     final rawBytes = map['signedData'];
-    final Uint8List bytes;
-
-    if (rawBytes is Uint8List) {
-      bytes = rawBytes;
-    } else if (rawBytes is List) {
-      bytes = Uint8List.fromList(rawBytes.cast<int>());
-    } else {
-      bytes = Uint8List(0);
-    }
+    final bytes = switch (rawBytes) {
+      final Uint8List b => b,
+      final List<dynamic> b => Uint8List.fromList(b.cast<int>()),
+      _ => Uint8List(0),
+    };
 
     return SignedData(
       signedData: bytes,

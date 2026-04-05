@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+/// {@template clave_http_client}
 /// HTTP client for Cl@ve Movil API calls.
 ///
 /// Provides typed methods for the notification code creation
 /// and validation endpoints.
+/// {@endtemplate}
 class ClaveHttpClient {
   /// Creates a client with an optional custom [http.Client].
   ClaveHttpClient([http.Client? client]) : _client = client ?? http.Client();
@@ -21,26 +23,16 @@ class ClaveHttpClient {
     required String clientSecret,
     required String document,
     required String contrast,
-  }) async {
-    final response = await _client.post(
-      Uri.parse(url),
-      headers: {
-        'Content-Type': 'application/json',
-        'client_id': clientId,
-        'client_secret': clientSecret,
-      },
-      body: jsonEncode({
-        'doc': document,
-        'contraste': contrast,
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    }
-
-    throw _mapHttpError(response);
-  }
+  }) =>
+      _postJson(
+        url,
+        {
+          'Content-Type': 'application/json',
+          'client_id': clientId,
+          'client_secret': clientSecret,
+        },
+        {'doc': document, 'contraste': contrast},
+      );
 
   /// Validates a Cl@ve Movil notification code (polls for user approval).
   ///
@@ -51,48 +43,30 @@ class ClaveHttpClient {
     required String clientSecret,
     required String nif,
     required String tokenClaveMovil,
-  }) async {
-    final response = await _client.post(
-      Uri.parse(url),
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: {
-        'grant_type': 'password',
-        'nif': nif,
-        'token_clave_movil': tokenClaveMovil,
-        'idp': 'AEAT',
-        'client_id': clientId,
-        'client_secret': clientSecret,
-      },
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    }
-
-    throw _mapHttpError(response);
-  }
+  }) =>
+      _postJson(
+        url,
+        {'Content-Type': 'application/x-www-form-urlencoded'},
+        {
+          'grant_type': 'password',
+          'nif': nif,
+          'token_clave_movil': tokenClaveMovil,
+          'idp': 'AEAT',
+          'client_id': clientId,
+          'client_secret': clientSecret,
+        },
+        encode: false,
+      );
 
   /// Validates a token against the userInfo endpoint.
   Future<Map<String, dynamic>> getUserInfo({
     required String url,
     required String accessToken,
-  }) async {
-    final response = await _client.get(
-      Uri.parse(url),
-      headers: {
+  }) =>
+      _getJson(url, {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    }
-
-    return {};
-  }
+      });
 
   /// Posts a logout request.
   Future<bool> logout({
@@ -104,9 +78,7 @@ class ClaveHttpClient {
   }) async {
     final response = await _client.post(
       Uri.parse(url),
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: {
         'client_id': clientId,
         'client_secret': clientSecret,
@@ -114,8 +86,38 @@ class ClaveHttpClient {
         'refresh_token': refreshToken,
       },
     );
-
     return response.statusCode >= 200 && response.statusCode < 300;
+  }
+
+  Future<Map<String, dynamic>> _postJson(
+    String url,
+    Map<String, String> headers,
+    Object body, {
+    bool encode = true,
+  }) async {
+    final response = await _client.post(
+      Uri.parse(url),
+      headers: headers,
+      body: encode ? jsonEncode(body) : body,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw _mapHttpError(response);
+  }
+
+  Future<Map<String, dynamic>> _getJson(
+    String url,
+    Map<String, String> headers,
+  ) async {
+    final response = await _client.get(
+      Uri.parse(url),
+      headers: headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    return {};
   }
 
   Exception _mapHttpError(http.Response response) {
@@ -140,7 +142,9 @@ class ClaveHttpClient {
   void close() => _client.close();
 }
 
+/// {@template clave_api_exception}
 /// Exception thrown when a Cl@ve HTTP request returns a non-200 status code.
+/// {@endtemplate}
 class ClaveApiException implements Exception {
   /// Creates a [ClaveApiException] with the given [statusCode] and [body].
   const ClaveApiException(this.statusCode, this.body);

@@ -1,4 +1,6 @@
+/// {@template cert_sign_algorithm}
 /// Signing algorithms supported for certificate-based signatures.
+/// {@endtemplate}
 enum CertSignAlgorithm {
   /// SHA-256 with RSA.
   sha256rsa('SHA256RSA'),

@@ -1,9 +1,11 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+/// {@template clave_token_storage}
 /// Secure token storage for Cl@ve authentication.
 ///
 /// Wraps [FlutterSecureStorage] to persist access and refresh tokens
 /// encrypted on the device.
+/// {@endtemplate}
 class ClaveTokenStorage {
   /// Creates a token storage with the given [FlutterSecureStorage] instance.
   ClaveTokenStorage([FlutterSecureStorage? storage])

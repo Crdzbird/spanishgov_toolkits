@@ -1,4 +1,6 @@
+/// {@template document_validator}
 /// Utility class for validating Spanish identity documents (DNI and NIE).
+/// {@endtemplate}
 abstract final class DocumentValidator {
   static const _validLetters = [
     'T', 'R', 'W', 'A', 'G', 'M', 'Y', 'F', 'P', 'D', 'X', 'B', //

@@ -213,32 +213,8 @@ class ClaveRepository {
         contrast: contrast,
       );
 
-      // Response is a list of key-value pairs
-      final rawParams = response['params'];
-      final params = rawParams is List ? rawParams : [response];
-      var token = '';
-      var verificationCode = '';
-
-      for (final item in params) {
-        if (item is Map) {
-          final key = item['key'];
-          final value = item['value'];
-          final keyStr = key is String ? key : '';
-          final valueStr = value is String ? value : '';
-          if (keyStr == 'token_clave_movil') token = valueStr;
-          if (keyStr == 'cod_verificacion') verificationCode = valueStr;
-        }
-      }
-
-      // Fallback: try flat keys
-      if (token.isEmpty) {
-        final raw = response['token_clave_movil'];
-        token = raw is String ? raw : '';
-      }
-      if (verificationCode.isEmpty) {
-        final raw = response['cod_verificacion'];
-        verificationCode = raw is String ? raw : '';
-      }
+      final token = _extractField(response, 'token_clave_movil');
+      final verificationCode = _extractField(response, 'cod_verificacion');
 
       await _storage.saveDocument(document);
 
@@ -338,6 +314,23 @@ class ClaveRepository {
   // ---------------------------------------------------------------------------
   // Private
   // ---------------------------------------------------------------------------
+
+  String _extractField(Map<String, dynamic> response, String key) {
+    // Try flat key first
+    final flat = response[key];
+    if (flat is String) return flat;
+    // Try params list
+    final params = response['params'];
+    if (params is List) {
+      for (final item in params) {
+        if (item is Map && item['key'] == key) {
+          final value = item['value'];
+          if (value is String) return value;
+        }
+      }
+    }
+    return '';
+  }
 
   ClaveError _mapClaveApiError(Exception e) {
     if (e is ClaveApiException) {
