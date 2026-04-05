@@ -1,7 +1,14 @@
 name: felectronic_certificates_platform_interface
-description: A common platform interface for the felectronic_certificates plugin.
-version: 0.1.0+1
+description: >-
+  A common platform interface for the felectronic_certificates plugin.
+  Defines the shared API for Android and iOS certificate management.
+version: 1.0.0
 publish_to: none
+repository: https://github.com/nicoacevedor/felectronic_dnie
+issue_tracker: https://github.com/nicoacevedor/felectronic_dnie/issues
+topics:
+  - certificate
+  - platform-interface
 
 environment:
   sdk: ^3.11.0

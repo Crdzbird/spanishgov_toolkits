@@ -1,9 +1,17 @@
 name: felectronic_dnie
 description: >-
   Flutter plugin for reading and signing with Spanish electronic DNIe
-  (Documento Nacional de Identidad electr��nico) via NFC.
-version: 0.1.0+1
+  (Documento Nacional de Identidad electronico) via NFC.
+version: 1.0.0
 publish_to: none
+repository: https://github.com/nicoacevedor/felectronic_dnie
+issue_tracker: https://github.com/nicoacevedor/felectronic_dnie/issues
+topics:
+  - nfc
+  - dnie
+  - spain
+  - signing
+  - identity
 
 environment:
   sdk: ^3.11.0

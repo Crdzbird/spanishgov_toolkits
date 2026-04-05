@@ -20,7 +20,7 @@ Cl@ve authentication for Spanish government services. Provides a clean API for a
 
 ```yaml
 dependencies:
-  felectronic_clave: ^0.1.0
+  felectronic_clave: ^1.0.0
 ```
 
 ### Dependencies

@@ -1,7 +1,15 @@
 name: felectronic_dnie_platform_interface
-description: A common platform interface for the felectronic_dnie plugin.
-version: 0.1.0+1
+description: >-
+  A common platform interface for the felectronic_dnie plugin.
+  Defines the shared API for Android and iOS DNIe NFC implementations.
+version: 1.0.0
 publish_to: none
+repository: https://github.com/nicoacevedor/felectronic_dnie
+issue_tracker: https://github.com/nicoacevedor/felectronic_dnie/issues
+topics:
+  - nfc
+  - dnie
+  - platform-interface
 
 environment:
   sdk: ^3.11.0

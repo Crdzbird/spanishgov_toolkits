@@ -1,9 +1,17 @@
 name: felectronic_certificates
 description: >-
   Flutter plugin for managing device-stored certificates (import, sign, list,
-  delete) on Android and iOS.
-version: 0.1.0+1
+  delete) on Android and iOS using KeyStore and Keychain.
+version: 1.0.0
 publish_to: none
+repository: https://github.com/nicoacevedor/felectronic_dnie
+issue_tracker: https://github.com/nicoacevedor/felectronic_dnie/issues
+topics:
+  - certificate
+  - pkcs12
+  - signing
+  - keystore
+  - keychain
 
 environment:
   sdk: ^3.11.0

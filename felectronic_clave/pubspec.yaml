@@ -3,8 +3,16 @@ description: >-
   Cl@ve authentication for Spanish government services. Supports Cl@ve PIN,
   Cl@ve Permanente, Electronic Certificate, European Credential (eIDAS), and
   Cl@ve Movil flows.
-version: 0.1.0
+version: 1.0.0
 publish_to: none
+repository: https://github.com/nicoacevedor/felectronic_dnie
+issue_tracker: https://github.com/nicoacevedor/felectronic_dnie/issues
+topics:
+  - oauth
+  - clave
+  - spain
+  - authentication
+  - identity
 
 environment:
   sdk: ^3.4.0

@@ -1,7 +1,15 @@
 name: felectronic_certificates_android
-description: Android implementation of the felectronic_certificates plugin
-version: 0.1.0+1
+description: >-
+  Android implementation of the felectronic_certificates plugin
+  using the Android KeyStore for certificate management and signing.
+version: 1.0.0
 publish_to: none
+repository: https://github.com/nicoacevedor/felectronic_dnie
+issue_tracker: https://github.com/nicoacevedor/felectronic_dnie/issues
+topics:
+  - certificate
+  - android
+  - keystore
 
 environment:
   sdk: ^3.11.0

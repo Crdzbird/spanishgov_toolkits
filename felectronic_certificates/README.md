@@ -27,7 +27,7 @@ Flutter plugin for managing device-stored certificates. Import, sign with, list,
 
 ```yaml
 dependencies:
-  felectronic_certificates: ^0.1.0
+  felectronic_certificates: ^1.0.0
 ```
 
 ### Android Setup

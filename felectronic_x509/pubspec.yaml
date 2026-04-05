@@ -1,7 +1,17 @@
 name: felectronic_x509
-description: Pure Dart X.509 certificate parser for DER-encoded bytes.
-version: 0.1.0
+description: >-
+  Pure Dart X.509 certificate parser. Extracts subject, issuer, validity,
+  key usage, extensions, and more from DER-encoded bytes.
+version: 1.0.0
 publish_to: none
+repository: https://github.com/nicoacevedor/felectronic_dnie
+issue_tracker: https://github.com/nicoacevedor/felectronic_dnie/issues
+topics:
+  - x509
+  - certificate
+  - asn1
+  - der
+  - parser
 
 environment:
   sdk: ^3.4.0

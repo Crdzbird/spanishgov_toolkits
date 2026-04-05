@@ -10,7 +10,7 @@
 /// final cert = X509Parser.fromDer(derBytes);
 /// print(cert.subject.commonName);
 /// ```
-library felectronic_x509;
+library;
 
 export 'src/asn1/asn1_object.dart';
 export 'src/asn1/asn1_reader.dart';
