@@ -25,12 +25,9 @@ flutter:
         default_package: felectronic_dnie_ios
 
 dependencies:
-  felectronic_dnie_android:
-    path: ../felectronic_dnie_android
-  felectronic_dnie_ios:
-    path: ../felectronic_dnie_ios
-  felectronic_dnie_platform_interface:
-    path: ../felectronic_dnie_platform_interface
+  felectronic_dnie_android: ^1.0.0
+  felectronic_dnie_ios: ^1.0.0
+  felectronic_dnie_platform_interface: ^1.0.0
   flutter:
     sdk: flutter
 
