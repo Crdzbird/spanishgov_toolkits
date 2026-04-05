@@ -3,7 +3,6 @@ description: >-
   iOS implementation of the felectronic_certificates plugin
   using Security.framework for Keychain certificate management.
 version: 1.0.0
-publish_to: none
 repository: https://github.com/nicoacevedor/felectronic_dnie
 issue_tracker: https://github.com/nicoacevedor/felectronic_dnie/issues
 topics:

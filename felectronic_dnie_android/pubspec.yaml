@@ -3,7 +3,6 @@ description: >-
   Android implementation of the felectronic_dnie plugin for DNIe
   NFC operations including signing and certificate reading.
 version: 1.0.0
-publish_to: none
 repository: https://github.com/nicoacevedor/felectronic_dnie
 issue_tracker: https://github.com/nicoacevedor/felectronic_dnie/issues
 topics:
