@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
+import 'package:felectronic_certificates/src/certificate_session.dart';
 import 'package:felectronic_certificates_platform_interface/felectronic_certificates_platform_interface.dart';
+import 'package:felectronic_triphase/felectronic_triphase.dart';
 
 export 'package:felectronic_certificates_platform_interface/felectronic_certificates_platform_interface.dart'
     show
@@ -75,11 +77,53 @@ Future<void> clearDefaultCertificate() => _platform.clearDefaultCertificate();
 /// Uses [algorithm] to determine the signing algorithm
 /// (defaults to [CertSignAlgorithm.sha256rsa]).
 ///
-/// Throws a [CertificateError] subclass on failure.
+/// With no [format] this produces a bare PKCS#1 signature over [data], on
+/// device, and nothing is transmitted.
+///
+/// With a [format] it produces an advanced signature — CAdES, PAdES or XAdES —
+/// through the @firma three-phase protocol. **That sends [data] to the signing
+/// service.** The private key never leaves the device, but the document does;
+/// that is how the envelopes are built, not a choice this package makes.
+/// Because the network is the caller's, [transport] is required whenever
+/// [format] is given.
+///
+/// ```dart
+/// final raw = await signWithDefaultCertificate(bytes);
+/// final xades = await signWithDefaultCertificate(
+///   bytes,
+///   format: SignatureFormat.xades,
+///   transport: myTransport,
+/// );
+/// ```
+///
+/// Throws a [CertificateError] subclass on failure, or a [TriphaseException]
+/// when a format is given and the service exchange fails.
 Future<Uint8List> signWithDefaultCertificate(
   Uint8List data, {
   CertSignAlgorithm algorithm = CertSignAlgorithm.sha256rsa,
-}) => _platform.signWithDefaultCertificate(data, algorithm: algorithm);
+  SignatureFormat? format,
+  TriphaseTransport? transport,
+  Uri? serviceUrl,
+  String extraParams = '',
+}) async {
+  if (format == null) {
+    return _platform.signWithDefaultCertificate(data, algorithm: algorithm);
+  }
+  final session = await CertificateSession.fromDefault();
+  if (session == null) {
+    throw StateError(
+      'an advanced signature needs a default certificate, and none is set',
+    );
+  }
+  return session.sign(
+    data,
+    algorithm: algorithm,
+    format: format,
+    transport: transport,
+    serviceUrl: serviceUrl,
+    extraParams: extraParams,
+  );
+}
 
 /// Imports a PKCS#12 (.p12/.pfx) file into the device keystore.
 ///

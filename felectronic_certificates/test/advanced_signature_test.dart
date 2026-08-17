@@ -76,6 +76,86 @@ void main() {
     });
   });
 
+  group('signWithDefaultCertificate', () {
+    late _FakePlatform platform;
+
+    setUp(() {
+      platform = _FakePlatform();
+      FelectronicCertificatesPlatform.instance = platform;
+    });
+
+    /// The top-level function must keep its offline behavior by default,
+    /// exactly as the session method does.
+    test('no format delegates straight to the platform', () async {
+      var calls = 0;
+      Future<TriphaseResponse> transport(TriphaseRequest request) async {
+        calls++;
+        return const TriphaseResponse(statusCode: 200, body: 'x');
+      }
+
+      final result = await signWithDefaultCertificate(
+        Uint8List.fromList([1, 2, 3]),
+        transport: transport,
+      );
+
+      expect(result, _FakePlatform.signature);
+      expect(calls, 0);
+    });
+
+    test('a format runs the exchange', () async {
+      final bodies = <String>[];
+      final envelope =
+          base64Url.encode(utf8.encode('top-level')).replaceAll('=', '');
+      Future<TriphaseResponse> transport(TriphaseRequest request) async {
+        bodies.add(request.body);
+        final payload = base64.encode(utf8.encode('p'));
+        final body = bodies.length == 1
+            ? '<xml><firma><param n="PRE">$payload</param></firma></xml>'
+            : 'OK NEWID=$envelope';
+        return TriphaseResponse(
+          statusCode: 200,
+          body: base64Url.encode(utf8.encode(body)).replaceAll('=', ''),
+        );
+      }
+
+      final result = await signWithDefaultCertificate(
+        Uint8List.fromList([1]),
+        algorithm: CertSignAlgorithm.sha512rsa,
+        format: SignatureFormat.cades,
+        transport: transport,
+      );
+
+      expect(utf8.decode(result), 'top-level');
+      expect(bodies[0], contains('algo=SHA512withRSA'));
+      expect(bodies[0], contains('format=CAdES'));
+    });
+
+    /// Unlike the session method, this entry point has to find a certificate
+    /// first. Saying so beats a null dereference or an opaque platform error.
+    test('a format with no default certificate is a clear error', () async {
+      platform.hasDefault = false;
+
+      await expectLater(
+        signWithDefaultCertificate(
+          Uint8List.fromList([1]),
+          format: SignatureFormat.pades,
+          transport: (_) async =>
+              const TriphaseResponse(statusCode: 200, body: 'x'),
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    /// Raw signing does not need one, and must not start requiring it.
+    test('no format still works without a default certificate', () async {
+      platform.hasDefault = false;
+      expect(
+        await signWithDefaultCertificate(Uint8List.fromList([1])),
+        _FakePlatform.signature,
+      );
+    });
+  });
+
   group('CertificateSession.sign', () {
     late _FakePlatform platform;
 
@@ -228,6 +308,9 @@ class _FakePlatform extends FelectronicCertificatesPlatform
   /// Everything handed to the private key, in order.
   final List<Uint8List> signedPayloads = [];
 
+  /// Whether a default certificate is selected on the device.
+  bool hasDefault = true;
+
   static final _certificate = DeviceCertificate(
     serialNumber: '0a1b',
     holderName: 'Test Holder',
@@ -238,7 +321,8 @@ class _FakePlatform extends FelectronicCertificatesPlatform
   );
 
   @override
-  Future<DeviceCertificate?> getDefaultCertificate() async => _certificate;
+  Future<DeviceCertificate?> getDefaultCertificate() async =>
+      hasDefault ? _certificate : null;
 
   @override
   Future<Uint8List> signWithDefaultCertificate(
