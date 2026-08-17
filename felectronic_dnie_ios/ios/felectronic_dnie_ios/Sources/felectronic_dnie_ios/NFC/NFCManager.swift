@@ -9,15 +9,20 @@ import Foundation
 
 protocol NFCManager: AnyObject {
   
+  // `certAlias` selects which DNIe certificate to use. Both implementations
+  // in DefaultNFCManager already take it; the protocol had drifted and
+  // omitted it, so DefaultNFCManager did not satisfy this protocol.
   func sign(delegate: NFCManagerDelegate?,
             can: String,
             pin: String,
+            certAlias: String,
             data: Data,
             completion: @escaping(_ error: NFCError?) -> Void)
 
 func signPKCS1WithDnie(delegate: NFCManagerDelegate?,
                        can: String,
                        pin: String,
+                       certAlias: String,
                        data: Data,
                        completion: @escaping(_ error: NFCError?) -> Void)
 }

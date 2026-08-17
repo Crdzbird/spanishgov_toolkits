@@ -26,20 +26,20 @@ final class DNIeCardOperations: NSObject {
             var error: NSError?
             var certBase64Result: String?
 
-            let success = DNIeExceptionCatcher.tryBlock({
+            let success = DNIeExceptionCatcher.`try`({
                 self.apduConnection = CustomApduConnection()
                 let cryptHelper = EsGobJmulticardCryptoBcCryptoHelper()
                 let callbackHandler = CustomDnieCallbackHandler(nsString: can, with: pin)
 
                 let dnieFactory = EsGobJmulticardCardDnieDnieFactory.getDnieNfc(
-                    withEsGobJmulticardConnectionApduConnection: self.apduConnection,
+                    with: self.apduConnection,
                     with: cryptHelper,
-                    withJavaxSecurityAuthCallbackCallbackHandler: callbackHandler
+                    with: callbackHandler
                 )
 
-                let j509cert = dnieFactory?.getCertificate(
-                    with: certAlias
-                )
+                let j509cert = dnieFactory.flatMap {
+                    DNIeSwiftBridge.certificate(fromDnie: $0, alias: certAlias)
+                }
                 let securityCert = j509cert as? JavaSecurityCertCertificate
 
                 certBase64Result = EsGobAfirmaCoreMiscBase64.encode(
@@ -71,7 +71,7 @@ final class DNIeCardOperations: NSObject {
             var pkcs1Base64Result: String?
             var certBase64Result: String?
 
-            let success = DNIeExceptionCatcher.tryBlock({
+            let success = DNIeExceptionCatcher.`try`({
                 NotificationCenter.default.post(
                     name: NSNotification.Name("dni.info"),
                     object: nil,
@@ -96,9 +96,9 @@ final class DNIeCardOperations: NSObject {
                 )
 
                 let dnieFactory = EsGobJmulticardCardDnieDnieFactory.getDnieNfc(
-                    withEsGobJmulticardConnectionApduConnection: self.apduConnection,
+                    with: self.apduConnection,
                     with: cryptHelper,
-                    withJavaxSecurityAuthCallbackCallbackHandler: callbackHandler
+                    with: callbackHandler
                 )
 
                 NotificationCenter.default.post(
@@ -107,9 +107,9 @@ final class DNIeCardOperations: NSObject {
                     userInfo: ["message": "Obteniendo el certificado..."]
                 )
 
-                let j509cert = dnieFactory?.getCertificate(
-                    with: certAlias
-                )
+                let j509cert = dnieFactory.flatMap {
+                    DNIeSwiftBridge.certificate(fromDnie: $0, alias: certAlias)
+                }
                 let securityCert = j509cert as? JavaSecurityCertCertificate
 
                 certBase64Result = EsGobAfirmaCoreMiscBase64.encode(
@@ -123,9 +123,9 @@ final class DNIeCardOperations: NSObject {
                     userInfo: ["message": "Leyendo la clave privada..."]
                 )
 
-                let privateKey = dnieFactory?.getPrivateKey(
-                    with: certAlias
-                )
+                let privateKey = dnieFactory.flatMap {
+                    DNIeSwiftBridge.privateKey(fromDnie: $0, alias: certAlias)
+                }
 
                 let dataByte = IOSByteArray(nsData: data)
 
@@ -138,7 +138,7 @@ final class DNIeCardOperations: NSObject {
                 let pkSign = dnieFactory?.sign(
                     with: dataByte,
                     with: "SHA512withRSA",
-                    withEsGobJmulticardCardPrivateKeyReference: privateKey
+                    with: privateKey
                 )
 
                 pkcs1Base64Result = pkSign?.toNSData()
@@ -170,22 +170,25 @@ final class DNIeCardOperations: NSObject {
         DispatchQueue.global(qos: .default).async { [self] in
             var error: NSError?
 
-            let success = DNIeExceptionCatcher.tryBlock({
-                self.apduConnection = CustomApduConnection()
+            let success = DNIeExceptionCatcher.`try`({
+                // Held locally as well as on self, so the non-optional value
+                // can be passed on without a force-unwrap.
+                let connection = CustomApduConnection()
+                self.apduConnection = connection
                 let cryptoHelper = EsGobJmulticardCryptoBcCryptoHelper()
                 let callbackHandler = CustomDnieCallbackHandler(nsString: can, with: pin)
 
-                let dnie = EsGobJmulticardCardDnieDnieFactory.getDnie(
-                    withEsGobJmulticardConnectionApduConnection: self.apduConnection,
-                    withJavaxSecurityAuthCallbackPasswordCallback: nil,
-                    with: cryptoHelper,
-                    withJavaxSecurityAuthCallbackCallbackHandler: callbackHandler,
-                    withBoolean: true
+                let dnie = DNIeSwiftBridge.dnie(
+                    connection: connection,
+                    passwordCallback: nil,
+                    cryptoHelper: cryptoHelper,
+                    callbackHandler: callbackHandler,
+                    includeCloneCards: true
                 )
 
-                let certificate = dnie?.getCertificate(
-                    with: certAlias
-                )
+                let certificate = dnie.flatMap {
+                    DNIeSwiftBridge.certificate(fromDnie: $0, alias: certAlias)
+                }
                 let cert = certificate as? JavaSecurityCertCertificate
 
                 let certBase64 = EsGobAfirmaCoreMiscBase64.encode(
@@ -228,14 +231,14 @@ final class DNIeCardOperations: NSObject {
 
                     dnie?.openSecureChannelIfNotAlreadyOpened(withBoolean: true)
 
-                    let pke = dnie?.getPrivateKey(
-                        with: certAlias
-                    )
+                    let pke = dnie.flatMap {
+                        DNIeSwiftBridge.privateKey(fromDnie: $0, alias: certAlias)
+                    }
 
                     let pkcs1 = dnie?.sign(
                         with: preData,
                         with: signatureAlgorithm,
-                        withEsGobJmulticardCardPrivateKeyReference: pke
+                        with: pke
                     )
 
                     let xmlWithPkcs1 = ThreePhaseSigningService.addPKCS1ToXML(

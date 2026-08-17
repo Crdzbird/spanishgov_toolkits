@@ -188,10 +188,17 @@ final class ThreePhaseSigningService {
             for element in root.children ?? [] {
                 guard let element = element as? XMLElement else { continue }
                 let pk1Attributes: [AnyHashable: Any] = ["n": "PK1"]
-                if let pk1Element = XMLElement.element(
-                    withName: "param",
+                // XMLKit declares `+[XMLElement elementWithName:attributes:]`.
+                // Swift imports a class method whose name starts with the
+                // class's base name and returns that class as an initializer,
+                // so it arrives as `XMLElement(name:attributes:)` — not as a
+                // static `XMLElement.element(withName:)`.
+                // Failable: the Objective-C factory returns a nullable
+                // XMLElement, so Swift imports it as `init?`.
+                if let pk1Element = XMLElement(
+                    name: "param",
                     attributes: pk1Attributes
-                ) as? XMLElement {
+                ) {
                     pk1Element.text = pkcs1Base64
                     element.children?.add(pk1Element)
                 }

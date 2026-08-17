@@ -190,8 +190,15 @@ extension String {
       // Se encontró la línea que comienza con "<param n=\"PRE\">" y termina con "</param>"
       let indiceInicio = self.distance(from: self.startIndex, to: rangoInicio.lowerBound)
       let indiceFin = self.distance(from: self.startIndex, to: rangoFin.upperBound)
-      let nuevaEntrada = self.prefix(indiceFin) + "\n" + "<param n=\"PK1\">\(pkcs1)</param>" + "\n" + self.suffix(from: rangoFin.upperBound)
-      return String(nuevaEntrada)
+      // Each part is converted to String up front. Concatenating Substring
+      // (from `prefix`/`suffix`) with String literals left the overload of
+      // `prefix` ambiguous to the type checker.
+      let head = String(self.prefix(indiceFin))
+      let tail = String(self[rangoFin.upperBound...])
+      let nuevaEntrada = head
+        + "\n<param n=\"PK1\">\(pkcs1)</param>\n"
+        + tail
+      return nuevaEntrada
     } else {
       // No se encontró la línea, se devuelve el XML original.
       return self

@@ -1,5 +1,9 @@
 import CoreNFC
 import Flutter
+// Security was previously visible only transitively, through the bridging
+// header's include of DNIeManagerImports.h. That bridging header is gone
+// (unsupported in framework targets), so the dependency is now explicit.
+import Security
 import UIKit
 
 public class FelectronicDniePlugin: NSObject, FlutterPlugin, FelectronicDnieHostApi {
@@ -206,7 +210,9 @@ public class FelectronicDniePlugin: NSObject, FlutterPlugin, FelectronicDnieHost
 
 // MARK: - ElectronicDnieDelegate
 
-protocol ElectronicDnieDelegate: AnyObject {
+/// Public because `SignManager` exposes it in five `public` method
+/// signatures; an internal protocol there is a compile error.
+public protocol ElectronicDnieDelegate: AnyObject {
     func dnieReadingResult(result: DniResult)
     func dnieCertificateResult(certificate: String)
     func dnieError(error: NFCError)
@@ -215,7 +221,7 @@ protocol ElectronicDnieDelegate: AnyObject {
 
 extension FelectronicDniePlugin: ElectronicDnieDelegate {
 
-    func dnieReadingResult(result: DniResult) {
+    public func dnieReadingResult(result: DniResult) {
         let message = DnieSignedDataMessage(
             signedData: FlutterStandardTypedData(bytes: result.dataSigned),
             signedDataBase64: result.dataSignedString,
@@ -224,7 +230,7 @@ extension FelectronicDniePlugin: ElectronicDnieDelegate {
         replySign(.success(message))
     }
 
-    func dnieCertificateResult(certificate: String) {
+    public func dnieCertificateResult(certificate: String) {
         // Route to the appropriate pending completion
         if pendingCertDetailsCompletion != nil {
             let details = Self.parseCertificateDetails(fromBase64: certificate)
@@ -244,7 +250,7 @@ extension FelectronicDniePlugin: ElectronicDnieDelegate {
         }
     }
 
-    func dnieProbeResult(isValidDnie: Bool, atrHex: String, tagId: String) {
+    public func dnieProbeResult(isValidDnie: Bool, atrHex: String, tagId: String) {
         let message = DnieCardProbeMessage(
             isValidDnie: isValidDnie,
             atrHex: atrHex,
@@ -253,7 +259,7 @@ extension FelectronicDniePlugin: ElectronicDnieDelegate {
         replyProbe(.success(message))
     }
 
-    func dnieError(error: NFCError) {
+    public func dnieError(error: NFCError) {
         let flutterError = PigeonError(
             code: error.flutterErrorCode,
             message: error.flutterErrorMessage,
@@ -295,52 +301,41 @@ extension FelectronicDniePlugin: ElectronicDnieDelegate {
 
         let summary = SecCertificateCopySubjectSummary(secCert) as? String ?? ""
 
-        // Extract fields from the certificate using Security framework
-        var subjectCN = summary
-        var subjectSerial = ""
-        var issuerCN = ""
-        var issuerOrg = ""
-        var notBefore: Int64 = 0
-        var notAfter: Int64 = 0
+        // This previously called `SecCertificateCopyValues`, which is declared
+        // `__IPHONE_NA` — macOS only. The file therefore could not compile for
+        // iOS at all; it went unnoticed because this package's CI workflow has
+        // never run (it triggered on `main` while the branch is `master`).
+        //
+        // Only what iOS can actually answer is filled in here. Issuer, validity
+        // and the exact subject serial are decoded from the certificate in Dart
+        // by `felectronic_x509` — see `SignedDataX.parsedCertificate`, which
+        // already parses this same base64 DER. That mirrors what the
+        // felectronic_certificates suite does, and keeps Android and iOS from
+        // disagreeing about the same certificate.
+        let subjectCN = summary
+
+        // SecCertificateCopySerialNumberData is iOS 11+.
         var serialHex = ""
-        var isValid = false
-
-        if let values = SecCertificateCopyValues(secCert, nil, nil) as? [String: Any] {
-            // Subject Name
-            if let subjectName = values["2.5.4.3"] as? [String: Any],
-               let value = subjectName["value"] as? String {
-                subjectCN = value
-            }
-            // Subject Serial Number (NIF)
-            if let serial = values["2.5.4.5"] as? [String: Any],
-               let value = serial["value"] as? String {
-                subjectSerial = value.replacingOccurrences(of: "IDCES-", with: "")
-            }
-            // Not Valid Before
-            if let nvb = values["2.16.840.1.113741.2.1.1.1.3"] as? [String: Any],
-               let value = nvb["value"] as? Date {
-                notBefore = Int64(value.timeIntervalSince1970 * 1000)
-            }
-            // Not Valid After
-            if let nva = values["2.16.840.1.113741.2.1.1.1.4"] as? [String: Any],
-               let value = nva["value"] as? Date {
-                notAfter = Int64(value.timeIntervalSince1970 * 1000)
-            }
+        var serialError: Unmanaged<CFError>?
+        if let serialData = SecCertificateCopySerialNumberData(
+            secCert,
+            &serialError
+        ) as Data? {
+            serialHex = serialData.map { String(format: "%02x", $0) }.joined()
         }
 
-        // Fallback: parse DN from summary for subject fields
-        if subjectSerial.isEmpty {
-            subjectSerial = parseDNField(summary, field: "SERIALNUMBER")
-                .replacingOccurrences(of: "IDCES-", with: "")
-        }
+        // The subject DN is the one structured field the summary exposes.
+        let subjectSerial = parseDNField(summary, field: "SERIALNUMBER")
+            .replacingOccurrences(of: "IDCES-", with: "")
 
-        // Try to get validity from the raw DER
-        let now = Date()
-        if notBefore > 0 && notAfter > 0 {
-            let before = Date(timeIntervalSince1970: TimeInterval(notBefore) / 1000)
-            let after = Date(timeIntervalSince1970: TimeInterval(notAfter) / 1000)
-            isValid = now >= before && now <= after
-        }
+        // Not derivable through the iOS Security framework — Dart supplies
+        // these from the DER. Empty/zero here means "ask the certificate",
+        // not "the certificate says zero".
+        let issuerCN = ""
+        let issuerOrg = ""
+        let notBefore: Int64 = 0
+        let notAfter: Int64 = 0
+        let isValid = false
 
         return DnieCertificateDetailsMessage(
             subjectCommonName: subjectCN,
@@ -399,21 +394,13 @@ extension FelectronicDniePlugin: ElectronicDnieDelegate {
 
         let fullName = givenName.isEmpty ? surnames : "\(givenName) \(surnames)"
 
-        // Extract NIF from SERIALNUMBER
-        var nif = ""
-        if let values = SecCertificateCopyValues(secCert, nil, nil) as? [String: Any],
-           let serial = values["2.5.4.5"] as? [String: Any],
-           let value = serial["value"] as? String {
-            nif = value.replacingOccurrences(of: "IDCES-", with: "")
-        }
-
-        // Extract country
-        var country = ""
-        if let values = SecCertificateCopyValues(secCert, nil, nil) as? [String: Any],
-           let c = values["2.5.4.6"] as? [String: Any],
-           let value = c["value"] as? String {
-            country = value
-        }
+        // Extracted from the subject summary rather than
+        // `SecCertificateCopyValues`, which is macOS-only (see the note in
+        // `parseCertificateDetails`). Dart re-derives both from the DER via
+        // `felectronic_x509` when an exact value is needed.
+        let nif = parseDNField(summary, field: "SERIALNUMBER")
+            .replacingOccurrences(of: "IDCES-", with: "")
+        let country = parseDNField(summary, field: "C")
 
         return DniePersonalDataMessage(
             fullName: fullName,

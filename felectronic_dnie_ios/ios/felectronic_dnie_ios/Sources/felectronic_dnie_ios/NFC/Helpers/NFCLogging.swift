@@ -50,6 +50,17 @@ struct NFCLogger {
 #endif
   }
 
+  /// Logs a message at `logType`.
+  ///
+  /// Seven call sites across SignManager and ThreePhaseSigningService already
+  /// call `log(type:_:)`, but only the unlabelled `log(_:_:)` below existed —
+  /// and it is `private`, so those calls failed on both the label and the
+  /// access level. This is the labelled entry point they expect; the
+  /// implementation stays private.
+  func log(type logType: NFCLogType, _ message: String) {
+    log(logType, message)
+  }
+
   private func log(_ logType: NFCLogType, _ message: String) {
 #if DEBUG
     switch logType {
