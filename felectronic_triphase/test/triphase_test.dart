@@ -51,13 +51,27 @@ void main() {
       );
     });
 
-    test('url-safe output avoids characters that break the body', () {
-      // 0xFB 0xFF encodes to "+/8" in standard base64; both characters would
-      // be misread in a request body.
+    test('url-safe output rewrites the alphabet', () {
+      // 0xFB 0xFF 0xBF encodes to "+/+/" in standard base64; both characters
+      // would be misread in a request body.
       final urlSafe = TriphaseCodec.urlSafe([0xFB, 0xFF, 0xBF]);
       expect(urlSafe, isNot(contains('+')));
       expect(urlSafe, isNot(contains('/')));
-      expect(urlSafe, isNot(contains('=')));
+    });
+
+    /// The Android implementation — the only one that has run against the
+    /// real service — keeps base64 padding. An earlier revision here stripped
+    /// it, copying the never-executed Swift; a strict Java decoder would
+    /// reject that. The input below is chosen to need padding.
+    test('padding is retained, matching the Android encoder', () {
+      expect(TriphaseCodec.urlSafe([0x01]), endsWith('=='));
+      expect(TriphaseCodec.urlSafe([0x01, 0x02]), endsWith('='));
+      expect(TriphaseCodec.urlSafe([0x01, 0x02, 0x03]), isNot(endsWith('=')));
+    });
+
+    test('an encoded string can be rewritten without touching padding', () {
+      expect(TriphaseCodec.toUrlSafe('ab+/cd=='), 'ab-_cd==');
+      expect(TriphaseCodec.toUrlSafe('plain'), 'plain');
     });
   });
 
@@ -74,6 +88,54 @@ void main() {
       expect(body, contains('format=PAdES'));
       expect(body, contains('algo=SHA256withRSA'));
       expect(body, contains('cert=$certificate'));
+    });
+
+    /// A certificate is usually held as standard base64, whose `+` and `/`
+    /// would be misread in the body. The Android implementation rewrites it;
+    /// an earlier revision here passed it through untouched.
+    test('the certificate is rewritten to the url-safe alphabet', () {
+      final body = TriphaseRequests.preSign(
+        certificateBase64: 'MIIB+aa/bb==',
+        document: document,
+        format: SignatureFormat.cades,
+        algorithm: SignatureAlgorithm.sha256withRsa,
+        extraParams: '',
+      );
+      expect(body, contains('cert=MIIB-aa_bb=='));
+      expect(body, isNot(contains('+')));
+    });
+
+    /// Android appends the field only when there is something to send.
+    test('params is omitted when empty and present when not', () {
+      String bodyWith(String extra) => TriphaseRequests.preSign(
+            certificateBase64: certificate,
+            document: document,
+            format: SignatureFormat.cades,
+            algorithm: SignatureAlgorithm.sha256withRsa,
+            extraParams: extra,
+          );
+
+      expect(bodyWith(''), isNot(contains('params=')));
+      expect(
+        bodyWith('mode=implicit'),
+        contains('params=${base64.encode(utf8.encode('mode=implicit'))}'),
+      );
+    });
+
+    /// params keeps the standard alphabet while cert and doc do not — a
+    /// genuine asymmetry in the Android implementation, reproduced here.
+    test('params stays standard base64 while cert and doc are rewritten', () {
+      final body = TriphaseRequests.preSign(
+        certificateBase64: 'a+b/c',
+        document: Uint8List.fromList([0xFB, 0xFF, 0xBF]),
+        format: SignatureFormat.cades,
+        algorithm: SignatureAlgorithm.sha256withRsa,
+        // Encodes to a value containing '+' and '/'.
+        extraParams: String.fromCharCodes([0xFB, 0xFF, 0xBF]),
+      );
+      final params = body.split('params=').last;
+      expect(params, isNot(contains('-')));
+      expect(body.split('&doc=').last.split('&').first, isNot(contains('+')));
     });
 
     test('post-sign differs from pre-sign by op and the session', () {

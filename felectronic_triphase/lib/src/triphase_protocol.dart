@@ -136,22 +136,39 @@ class TriphaseResponse {
 
 /// Base64 in the two variants this protocol mixes.
 ///
-/// The service's own Java `Base64` class takes a boolean for URL-safe output,
-/// and the original client passed `true` for the document and certificate but
-/// used standard base64 for the extra parameters. That inconsistency is
-/// preserved here rather than harmonized — the request body is not
-/// form-encoded, so changing which characters appear in a value could change
-/// how the service parses it, and there is no way to verify that without the
-/// live service.
+/// ## Matched against the Android implementation, not the iOS one
 ///
-/// See [TriphaseCodec.urlSafe] and [TriphaseCodec.standard].
+/// Three implementations of this protocol exist in this repository. Only the
+/// Kotlin one (`TriPhaseSignerManager`) has ever run against the real service,
+/// so it — not the never-executed Swift — is the reference for every encoding
+/// decision here.
+///
+/// It encodes with BouncyCastle's `Base64.toBase64String`, which is **standard
+/// base64 with padding**, then rewrites `+` and `/` to `-` and `_` for the
+/// fields that need it. The padding is left in place. Values therefore reach
+/// the service URL-safe *and* padded, and since the body is split on the first
+/// `=` of each parameter, trailing `=` inside a value is harmless.
+///
+/// The mix is genuine, not an oversight: `cert`, `doc` and `session` are
+/// rewritten, `params` is not. It is reproduced exactly.
 abstract final class TriphaseCodec {
-  /// URL-safe base64, unpadded — `-` and `_` for `+` and `/`.
-  static String urlSafe(List<int> bytes) =>
-      base64Url.encode(bytes).replaceAll('=', '');
+  /// URL-safe base64, **padding retained**, matching the Android encoder.
+  ///
+  /// An earlier revision stripped the padding. That was a guess drawn from the
+  /// Swift implementation, which has never run; a strict Java decoder on the
+  /// far side would reject an unpadded value, so the padding stays.
+  static String urlSafe(List<int> bytes) => toUrlSafe(base64.encode(bytes));
 
   /// Standard base64, padded.
   static String standard(List<int> bytes) => base64.encode(bytes);
+
+  /// Rewrites an already-encoded standard base64 string to the URL-safe
+  /// alphabet, leaving any padding alone.
+  ///
+  /// Needed because the certificate arrives as a string rather than bytes —
+  /// callers hold it in whichever form their platform produced.
+  static String toUrlSafe(String base64Text) =>
+      base64Text.replaceAll('+', '-').replaceAll('/', '_');
 
   /// Accepts either variant, restoring padding as needed.
   ///
@@ -196,9 +213,9 @@ abstract final class TriphaseRequests {
   }) =>
       'op=pre&cop=sign&format=${format.wireName}'
       '&algo=${algorithm.wireName}'
-      '&cert=$certificateBase64'
+      '&cert=${TriphaseCodec.toUrlSafe(certificateBase64)}'
       '&doc=${TriphaseCodec.urlSafe(document)}'
-      '&params=${TriphaseCodec.standard(utf8.encode(extraParams))}';
+      '${_params(extraParams)}';
 
   /// The post-sign body: hands back the session with the signature spliced in.
   static String postSign({
@@ -211,10 +228,19 @@ abstract final class TriphaseRequests {
   }) =>
       'op=post&cop=sign&format=${format.wireName}'
       '&algo=${algorithm.wireName}'
-      '&cert=$certificateBase64'
+      '&cert=${TriphaseCodec.toUrlSafe(certificateBase64)}'
       '&doc=${TriphaseCodec.urlSafe(document)}'
-      '&session=${TriphaseCodec.urlSafe(utf8.encode(session))}'
-      '&params=${TriphaseCodec.standard(utf8.encode(extraParams))}';
+      '${_params(extraParams)}'
+      '&session=${TriphaseCodec.urlSafe(utf8.encode(session))}';
+
+  /// The parameters field, omitted entirely when there is nothing to send.
+  ///
+  /// The Android implementation appends it only when the properties are
+  /// non-empty. Sending `&params=` with an empty value is a different request,
+  /// and not one that implementation has ever made.
+  static String _params(String extraParams) => extraParams.isEmpty
+      ? ''
+      : '&params=${TriphaseCodec.standard(utf8.encode(extraParams))}';
 
   /// Strips the `OK NEWID=` prefix the service puts on a successful post-sign.
   static String stripPostSignPrefix(String decoded) =>

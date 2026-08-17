@@ -242,7 +242,17 @@ void main() {
         transport: transport,
       );
 
-      expect(bodies[0], contains(base64.encode(_FakePlatform.certificateDer)));
+      final encoded = base64.encode(_FakePlatform.certificateDer);
+      expect(
+        encoded,
+        anyOf(contains('+'), contains('/')),
+        reason: 'the fixture must be able to detect the rewrite',
+      );
+      expect(
+        bodies[0],
+        contains('cert=${TriphaseCodec.toUrlSafe(encoded)}'),
+        reason: 'the certificate must reach the service url-safe',
+      );
     });
 
     /// The platform signs the payload the service asked for, not the document.
@@ -307,7 +317,16 @@ void main() {
 class _FakePlatform extends FelectronicCertificatesPlatform
     with MockPlatformInterfaceMixin {
   static final signature = Uint8List.fromList([0xAA, 0xBB, 0xCC]);
-  static final certificateDer = Uint8List.fromList([0x30, 0x82, 0x01, 0x0A]);
+
+  /// Chosen so its base64 contains both '+' and '/', which must be rewritten
+  /// before reaching the request body.
+  static final certificateDer = Uint8List.fromList([
+    0x30,
+    0x82,
+    0xFB,
+    0xFF,
+    0xBF,
+  ]);
 
   /// Everything handed to the private key, in order.
   final List<Uint8List> signedPayloads = [];

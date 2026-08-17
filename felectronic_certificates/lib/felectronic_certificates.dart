@@ -28,6 +28,7 @@ export 'package:felectronic_certificates_platform_interface/felectronic_certific
 export 'package:felectronic_triphase/felectronic_triphase.dart'
     show
         SignatureFormat,
+        TriphaseCodec,
         TriphaseException,
         TriphaseProtocolException,
         TriphaseRequest,

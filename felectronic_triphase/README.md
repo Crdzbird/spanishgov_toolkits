@@ -96,10 +96,26 @@ rejected document:
 Note that the service reports some of its own failures with HTTP 200 and an
 `ERR-` body; those surface as `TriphaseServiceException`.
 
+## Reference implementation
+
+Three implementations of this protocol exist in this repository. Only one has
+ever run against the real service:
+
+| | Runs today | |
+| --- | --- | --- |
+| `TriPhaseSignerManager` (Kotlin, Android) | yes | the reference |
+| `ThreePhaseSigningService` (Swift, iOS) | no — its pod has never linked | |
+| this package | not yet | matched against the Kotlin |
+
+Every encoding decision here follows the Kotlin. That matters more than it
+sounds: the two platform implementations disagree with each other. The Swift
+sends the certificate as standard base64 and defaults to XAdES; the Kotlin
+sends it URL-safe and defaults to CAdES. Where they differ, the one that
+works wins.
+
 ## Status
 
-The protocol shape follows the Java implementation the Android build runs, and
-is covered end to end by tests against a fake service. **No request in this
+Covered end to end by tests against a fake service. **No request from this
 package has reached the real service.** If the protocol has been misread, the
 fake and the client are wrong together and every test still passes — only a
 live call settles that.
