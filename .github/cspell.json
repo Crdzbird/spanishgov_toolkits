@@ -19,19 +19,31 @@
   ],
   "useGitignore": true,
   "words": [
+    "ADESP",
+    "AFIRMA",
     "appauth",
+    "AUTENTICACION",
+    "certificatesigner",
+    "CLVMOVIL",
+    "Crdzbird",
     "dnie",
     "Documento",
+    "EIDAS",
     "electronico",
     "felectronic",
     "fluttium",
     "IDAS",
     "Identidad",
+    "jmulticard",
     "mocktail",
     "Nacional",
+    "OCSP",
     "Permanente",
     "pubspec",
+    "SEGSOC",
     "spanishgov",
-    "toolkits"
+    "toolkits",
+    "xcassets",
+    "xcworkspace"
   ]
 }

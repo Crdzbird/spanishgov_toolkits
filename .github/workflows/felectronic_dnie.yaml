@@ -108,5 +108,14 @@ jobs:
           api-level: 29
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: flutter test integration_test
+          script: |
+            # The emulator-runner reports boot complete before adb always has
+            # the device registered, and Flutter's device discovery then finds
+            # nothing ("No devices are connected"). Wait for adb explicitly and
+            # print what Flutter can see, so a failure here is diagnosable
+            # rather than opaque.
+            adb wait-for-device
+            adb devices
+            flutter devices
+            flutter test integration_test
           working-directory: felectronic_dnie/example
