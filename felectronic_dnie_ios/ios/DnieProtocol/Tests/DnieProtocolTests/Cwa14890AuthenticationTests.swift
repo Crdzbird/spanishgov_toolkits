@@ -226,9 +226,14 @@ final class Cwa14890AuthenticationTests: XCTestCase {
   /// the reflection branch. Whether the reduction actually fires depends on the
   /// keys, so this runs several pairs to make sure the branch is reached.
   func testRecoversThroughTheReflectionBranch() throws {
+    // Each attempt has roughly a one-in-two chance of producing a signature
+    // above n/2. Twenty-four attempts puts a spurious failure below one in a
+    // million, which matters because the assertion at the end is deliberately
+    // a hard failure rather than a silent skip: a run that never reaches the
+    // branch has proved nothing, and should say so.
     var reflectionExercised = false
 
-    for _ in 0..<6 {
+    for _ in 0..<24 {
       let (terminal, terminalSecKey) = try makeKeyPair()
       let (card, cardSecKey) = try makeKeyPair()
       let terminalPublic = try publicOnly(terminal, from: terminalSecKey)
@@ -263,7 +268,7 @@ final class Cwa14890AuthenticationTests: XCTestCase {
 
     XCTAssertTrue(
       reflectionExercised,
-      "no generated key pair produced a signature above n/2 in six attempts; "
+      "no generated key pair produced a signature above n/2 in 24 attempts; "
         + "the reflection branch was never reached, so this test proved nothing"
     )
   }
@@ -360,9 +365,11 @@ final class Cwa14890AuthenticationTests: XCTestCase {
   /// needed, and fails outright if it never does — otherwise a missing
   /// reduction would slip through roughly half the time.
   func testTransmittedSignatureIsTheSmallerForm() throws {
+    // As above: 24 attempts so a spurious failure is negligible while the
+    // assertion stays a hard failure.
     var reductionExercised = false
 
-    for _ in 0..<8 {
+    for _ in 0..<24 {
       let (terminal, _, card, cardPublic) = try makeCompatiblePair()
       let prnd = [UInt8](repeating: 0x6E, count: terminal.modulusLength - 54)
       let kifd = [UInt8](repeating: 0x4D, count: 32)
@@ -400,7 +407,7 @@ final class Cwa14890AuthenticationTests: XCTestCase {
 
     XCTAssertTrue(
       reductionExercised,
-      "no key pair in eight attempts produced a signature above n/2, so the "
+      "no key pair in 24 attempts produced a signature above n/2, so the "
         + "reduction was never exercised and this test proved nothing")
   }
 
