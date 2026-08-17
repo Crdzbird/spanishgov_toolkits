@@ -1,0 +1,33 @@
+name: felectronic_triphase
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/felectronic_triphase.yaml"
+      - "pubspec.yaml"
+      - "felectronic_triphase/**"
+  push:
+    branches:
+      - master
+    paths:
+      - ".github/workflows/felectronic_triphase.yaml"
+      - "pubspec.yaml"
+      - "felectronic_triphase/**"
+
+jobs:
+  build:
+    # Pure Dart, but a member of the pub workspace, so resolving it pulls in
+    # the Flutter packages and needs the Flutter SDK. dart_package.yml exposes
+    # no Flutter inputs, hence the Flutter workflow — same reasoning as
+    # felectronic_x509.
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
+    with:
+      flutter_version: 3.47.0
+      working_directory: felectronic_triphase
+      # Measured at 91%; the protocol is covered end to end through a fake
+      # transport. Set just below so an unrelated line does not break CI.
+      min_coverage: 88

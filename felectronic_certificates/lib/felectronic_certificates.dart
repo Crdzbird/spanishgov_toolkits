@@ -23,6 +23,17 @@ export 'package:felectronic_certificates_platform_interface/felectronic_certific
         X509Name,
         X509Parser;
 
+export 'package:felectronic_triphase/felectronic_triphase.dart'
+    show
+        SignatureFormat,
+        TriphaseException,
+        TriphaseProtocolException,
+        TriphaseRequest,
+        TriphaseResponse,
+        TriphaseServiceException,
+        TriphaseTransport,
+        TriphaseTransportException;
+export 'src/advanced_signature.dart';
 export 'src/certificate_session.dart';
 
 FelectronicCertificatesPlatform get _platform =>

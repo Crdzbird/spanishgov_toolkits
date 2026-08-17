@@ -4,13 +4,23 @@ import 'dart:typed_data';
 import 'package:felectronic_triphase/src/triphase_protocol.dart';
 import 'package:felectronic_triphase/src/triphase_session.dart';
 
-/// Produces a raw PKCS#1 signature over [payload].
+/// Signs [payload] with the private key, under the agreed algorithm.
+///
+/// **This is a full signature, not a modular exponentiation.** The service
+/// hands back the bytes to be signed and expects the algorithm named in the
+/// request to be applied whole — the payload is hashed, then signed. On iOS
+/// `SecKeyCreateSignature` with a `rsaSignatureMessagePKCS1v15SHA*` algorithm
+/// does exactly this; a DNIe reaches the same result by hashing on the device
+/// and letting the card apply PKCS#1 to the resulting DigestInfo.
+///
+/// Implementing this as raw RSA over the payload produces a signature that
+/// verifies against nothing, and the service will accept the post-sign
+/// request regardless — the failure surfaces much later, in a verifier.
 ///
 /// This is the only step that needs a private key, and the only step that
-/// differs between an electronic certificate in the keystore and a DNIe card.
-/// Everything else in the three-phase protocol is the same for both, which is
-/// why this is a function the caller supplies rather than something this
-/// package knows about.
+/// differs between an electronic certificate and a DNIe. Everything else in
+/// the protocol is identical for both, which is why it is a callback rather
+/// than something this package implements.
 typedef Pkcs1Signer = Future<Uint8List> Function(Uint8List payload);
 
 /// The @firma three-phase signing protocol.

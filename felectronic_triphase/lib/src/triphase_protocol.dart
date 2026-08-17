@@ -27,11 +27,23 @@ enum SignatureFormat {
 /// they are not Dart or Apple spellings and must not be "tidied".
 enum SignatureAlgorithm {
   sha256withRsa('SHA256withRSA'),
-  sha512withRsa('SHA512withRSA');
+  sha384withRsa('SHA384withRSA'),
+  sha512withRsa('SHA512withRSA'),
+  sha256withEcdsa('SHA256withECDSA'),
+  sha384withEcdsa('SHA384withECDSA'),
+  sha512withEcdsa('SHA512withECDSA');
 
   const SignatureAlgorithm(this.wireName);
 
+  /// The name the service matches on, in Java's JCA spelling.
   final String wireName;
+
+  /// Whether this names an elliptic-curve key rather than an RSA one.
+  ///
+  /// A DNIe is always RSA; an electronic certificate in the keystore may not
+  /// be, and signing EC data with RSA parameters produces a signature that
+  /// verifies against nothing.
+  bool get isEllipticCurve => wireName.endsWith('withECDSA');
 }
 
 /// What went wrong during a three-phase signature.
@@ -127,7 +139,7 @@ class TriphaseResponse {
 /// The service's own Java `Base64` class takes a boolean for URL-safe output,
 /// and the original client passed `true` for the document and certificate but
 /// used standard base64 for the extra parameters. That inconsistency is
-/// preserved here rather than harmonised — the request body is not
+/// preserved here rather than harmonized — the request body is not
 /// form-encoded, so changing which characters appear in a value could change
 /// how the service parses it, and there is no way to verify that without the
 /// live service.
@@ -147,19 +159,19 @@ abstract final class TriphaseCodec {
   /// requires a length that is a multiple of four, so the padding is restored
   /// before decoding.
   static Uint8List decode(String value) {
-    var normalised = value.replaceAll('-', '+').replaceAll('_', '/').trim();
-    switch (normalised.length % 4) {
+    var normalized = value.replaceAll('-', '+').replaceAll('_', '/').trim();
+    switch (normalized.length % 4) {
       case 2:
-        normalised += '==';
+        normalized += '==';
       case 3:
-        normalised += '=';
+        normalized += '=';
       case 1:
         throw const TriphaseProtocolException(
           'base64 payload has an impossible length',
         );
     }
     try {
-      return base64.decode(normalised);
+      return base64.decode(normalized);
     } on FormatException catch (error) {
       throw TriphaseProtocolException(
         'could not decode base64: ${error.message}',

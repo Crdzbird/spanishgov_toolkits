@@ -32,7 +32,7 @@ void main() {
       base64Url.encode(utf8.encode(text)).replaceAll('=', '');
 
   final document = Uint8List.fromList(utf8.encode('the document to sign'));
-  const certificate = 'TUlJQ2VydGlmaWNhdGU';
+  const certificate = 'Q2VydA';  // base64url of 'Cert'
 
   group('codec', () {
     test('decodes base64url without padding', () {
