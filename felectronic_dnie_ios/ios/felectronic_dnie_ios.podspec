@@ -95,7 +95,31 @@ iOS implementation for reading and signing with Spanish electronic DNIe
     'felectronic_dnie_ios/Sources/felectronic_dnie_ios/jmulticard-objc/es/gob/jmulticard/crypto/BcCryptoHelper.h',
   ]
 
-  s.source_files = ['felectronic_dnie_ios/Sources/**/*.{swift,m}'] + swift_facing_headers
+  # ---------------------------------------------------------------------
+  # DnieProtocol — the native Swift protocol layer replacing jmulticard.
+  # ---------------------------------------------------------------------
+  #
+  # These sources are ALSO a standalone SwiftPM package (see DnieProtocol/),
+  # which is how they are tested: `swift test` in that directory runs the whole
+  # suite on macOS in under a second, with no simulator, no device and no card.
+  # CocoaPods compiles the same files into this framework. Keep both working —
+  # the package is the only place this code is currently exercised.
+  #
+  # Note what this does NOT depend on: nothing under jmulticard-objc, and no
+  # j2objc runtime. It uses only CryptoKit, CommonCrypto and Security. So this
+  # half of the pod links today, and is unaffected by the libjre_emul.a
+  # blocker documented below. As DnieProtocol grows to cover what jmulticard
+  # does, the transpiled tree shrinks and eventually goes away — at which point
+  # the blocker becomes irrelevant rather than solved.
+  dnie_protocol_sources = 'DnieProtocol/Sources/DnieProtocol/**/*.swift'
+
+  s.source_files = [
+    'felectronic_dnie_ios/Sources/**/*.{swift,m}',
+    dnie_protocol_sources,
+  ] + swift_facing_headers
+
+  # The package's tests are for `swift test`, not for the framework build.
+  s.exclude_files = 'DnieProtocol/Tests/**/*'
 
   # Only these reach the framework's umbrella header. The remaining ~2,870
   # headers stay out of every build phase and resolve through
