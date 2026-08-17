@@ -116,6 +116,45 @@ iOS implementation for reading and signing with Spanish electronic DNIe
   # reach Objective-C compilation.
   s.compiler_flags = '-fno-objc-arc'
 
+  # ---------------------------------------------------------------------
+  # j2objc JRE runtime — REQUIRED for this pod to link. Currently missing.
+  # ---------------------------------------------------------------------
+  #
+  # Every source file in this pod compiles (1,769 of them), but linking fails
+  # with ~460 undefined symbols: IOSClass_*, IOSArray_*, JavaLang*, JavaUtil*,
+  # JavaIo*, JavaMath*, JavaNet*.
+  #
+  # Those are j2objc's JRE emulation. This repository ships the transpiled
+  # APPLICATION code (1,305 .m files under jmulticard-objc/) and 1,040 JRE
+  # HEADERS under j2objc/ — but no JRE implementations, because j2objc ships
+  # them as a prebuilt static library instead. Android does the equivalent
+  # correctly: felectronic_dnie_android/android/libs/jmulticard-3.0.0.jar is
+  # vendored, which is why Android links and builds.
+  #
+  # To finish: drop libjre_emul.a into felectronic_dnie_ios/Libraries/ and
+  # uncomment the two lines below.
+  #
+  #   s.vendored_libraries = 'felectronic_dnie_ios/Libraries/libjre_emul.a'
+  #   s.libraries          = 'z', 'icucore'
+  #
+  # Sourcing it:
+  #   * Prefer the exact build that produced this tree — the upstream
+  #     DNIe/Portafirmas iOS project. The generated code is ABI-coupled to the
+  #     j2objc version that emitted it, and these headers carry no version
+  #     marker (jmulticard-3.0.0 is the Java library's version, not j2objc's).
+  #     A mismatched runtime can fail to link, or link and misbehave at run
+  #     time inside signing code.
+  #   * Google no longer publishes prebuilt archives: the release assets for
+  #     tags 3.1 / 3.0.0 / 2.8 / 2.7 / 2.6 are gone (404). Building j2objc from
+  #     source is possible but yields an unverified version match.
+  #
+  # The library must include the simulator slice (or be an .xcframework) for
+  # simulator builds; use s.vendored_frameworks instead of s.vendored_libraries
+  # if it arrives as an .xcframework.
+  #
+  # Once linking succeeds, restore the ios end-to-end job removed from
+  # .github/workflows/felectronic_dnie.yaml.
+
   s.dependency 'Flutter'
   s.platform         = :ios, '15.0'
 
