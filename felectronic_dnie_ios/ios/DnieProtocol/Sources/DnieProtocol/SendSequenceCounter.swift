@@ -88,6 +88,8 @@ public enum SecureChannelError: Error, Equatable, Sendable {
   case badChallengeLength(role: String, actual: Int)
   /// A cryptographic checksum was not 4 or 8 bytes.
   case badChecksumLength(actual: Int)
+  /// A secure-messaging response lacked a data object the protocol requires.
+  case missingResponseObject(tag: UInt8)
   /// The card reported that the MAC it computed did not match ours.
   case invalidCryptographicChecksum
 }
