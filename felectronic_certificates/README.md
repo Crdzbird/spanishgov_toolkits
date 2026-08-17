@@ -11,11 +11,60 @@ Flutter plugin for managing device-stored certificates. Import, sign with, list,
 |---------|-------------|
 | **Import** | Import PKCS#12 (.p12/.pfx) files into the device keystore |
 | **Sign** | Sign arbitrary data with a certificate's private key |
+| **Advanced signatures** | CAdES, PAdES and XAdES envelopes via the @firma service |
 | **List** | Retrieve all installed certificates with metadata |
 | **Select** | Open a native certificate picker or set default by serial |
 | **Delete** | Remove certificates by serial number or default selection |
 | **Session** | Builder pattern for repeated operations on one certificate |
 | **Extensions** | Expiry checks, usage labels, display helpers |
+
+## Signing
+
+Two kinds of signature, chosen per call.
+
+### Raw PKCS#1 — offline
+
+The default. Signs on device; nothing is transmitted.
+
+```dart
+final session = await CertificateSession.fromDefault();
+final signature = await session!.sign(documentBytes);
+```
+
+### CAdES, PAdES, XAdES — via the signing service
+
+Pass a `format`. Building these envelopes needs the whole document and
+format-specific machinery, so the @firma service does it across three phases
+while your private key stays on the device.
+
+```dart
+final signature = await session.sign(
+  documentBytes,
+  format: SignatureFormat.pades,
+  transport: myTransport,
+);
+```
+
+> **The document is sent to the signing service.** The private key never leaves
+> the device, but the document does — that is how the envelopes are built, not
+> a choice this package makes. Consider it before signing confidential
+> material.
+
+The network is yours: `transport` is required whenever `format` is given, so
+timeouts, proxying and certificate pinning stay under your control. See
+[`felectronic_triphase`](../felectronic_triphase/README.md) for a
+`package:http` adapter and the error types.
+
+Both entry points take the same options:
+
+```dart
+await signWithDefaultCertificate(
+  documentBytes,
+  algorithm: CertSignAlgorithm.sha512rsa,
+  format: SignatureFormat.xades,
+  transport: myTransport,
+);
+```
 
 ## Platform Support
 

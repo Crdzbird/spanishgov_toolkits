@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.0
+
+- `CertificateSession.sign` and `signWithDefaultCertificate` accept an optional
+  `format`, producing CAdES, PAdES or XAdES signatures through the @firma
+  service. Without one, behavior is unchanged: a bare PKCS#1 signature computed
+  on device, with nothing transmitted.
+- Requesting a format sends the document to the signing service; the private
+  key still never leaves the device.
+- `transport` is required alongside `format`, leaving timeouts, proxying and
+  certificate pinning with the caller.
+- Every `CertSignAlgorithm`, including SHA-384 and the ECDSA variants, maps to
+  the service's algorithm names.
+
 ## 1.0.0
 
 - Import, list, select, sign, and delete PKCS#12 device certificates.
