@@ -7,29 +7,32 @@ public enum BerTlvError: Error, Equatable, Sendable {
   case lengthOverflow(atOffset: Int)
 }
 
-/// A single BER-TLV object.
+/// A single BER-TLV object, decoded per X.690.
 ///
-/// **This is a standards-correct BER-TLV decoder, and it deliberately does
-/// NOT reproduce `es.gob.jmulticard.asn1.Tlv`.** That implementation reads a
-/// single-byte tag and then, when the tag's constructed bit (`0x20`) is
-/// *clear*, consumes a second length byte:
+/// ## Relationship to `es.gob.jmulticard.asn1.Tlv`
 ///
-/// ```objc
-/// if ((self->tag_ & 0x20) == 0) {
-///   size = (size << 8) + (bytes[offset++] & 0xff);
-/// }
-/// ```
+/// That class decodes lengths exactly as BER specifies — short form below
+/// `0x80`, long form for `0x81`–`0x83`, and the indefinite form at `0x80`,
+/// which it accepts only for constructed tags. This decoder agrees with it on
+/// every length encoding, and differs in two narrow ways:
 ///
-/// That is not BER: it makes the length encoding depend on whether the tag is
-/// primitive, and it cannot represent multi-byte tags at all. It presumably
-/// works for the specific structures the library parses, but porting it would
-/// bake a non-standard rule into new code.
+/// 1. **Multi-byte tags.** jmulticard reads a single tag byte, so a tag whose
+///    low five bits are all set (`0x1F`, e.g. `7F 49` for a CVC public key)
+///    would be misparsed. This decoder follows X.690 8.1.2 and reads the
+///    continuation bytes. That matters from Stage 3 onward, where card
+///    verifiable certificates use exactly those tags.
+/// 2. **Indefinite length is rejected here.** jmulticard permits it for
+///    constructed tags; card structures are DER, where it is illegal, so
+///    treating it as an error surfaces malformed data instead of guessing at
+///    where the value ends.
 ///
-/// The choice is recorded here rather than made silently: this decoder follows
-/// X.690, and Stage 2 must validate it against real card structures (CDF,
-/// PrKDF, and the CVC blobs) before anything depends on it. If a real card
-/// structure fails to decode, that is a finding about the card data, not a
-/// licence to reintroduce the quirk without understanding it.
+/// An earlier revision of this file claimed jmulticard's length handling was
+/// non-standard. That was a misreading of the transpiled source — two
+/// unrelated branches read as one — and the claim was wrong. Recorded here
+/// because the mistaken version was committed, and someone comparing the two
+/// implementations deserves the accurate account.
+///
+/// Stage 2 validates this decoder against real PKCS#15 structures.
 public struct BerTlv: Equatable, Sendable {
   /// The full tag, including multi-byte tags, most significant byte first.
   public let tag: [UInt8]

@@ -3,11 +3,11 @@ import XCTest
 
 /// BER-TLV decoding, per X.690.
 ///
-/// These deliberately test standards behaviour rather than parity with
-/// `es.gob.jmulticard.asn1.Tlv`, which uses a non-standard rule (a second
-/// length byte when the tag is primitive) and cannot express multi-byte tags.
-/// See the note on `BerTlv`. Stage 2 must confirm this decoder against real
-/// card structures before anything depends on it.
+/// `es.gob.jmulticard.asn1.Tlv` decodes lengths the same way; this decoder
+/// additionally handles multi-byte tags (needed for CVC from Stage 3) and
+/// rejects the indefinite form, which is illegal in the DER that cards use.
+/// See the note on `BerTlv` — including the correction of an earlier, wrong
+/// claim that jmulticard's length handling was non-standard.
 final class BerTlvTests: XCTestCase {
 
   func testShortFormPrimitive() throws {
