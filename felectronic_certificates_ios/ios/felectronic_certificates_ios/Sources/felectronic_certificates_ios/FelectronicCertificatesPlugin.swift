@@ -1,5 +1,25 @@
 import Flutter
 import Foundation
+import Security
+
+extension CertSignAlgorithmMessage {
+    /// The Security framework algorithm for this wire value.
+    ///
+    /// Exhaustive with no `default` branch: adding a case to the Pigeon
+    /// schema becomes a compile error here instead of silently falling back
+    /// to SHA-256/RSA, which previously meant an EC algorithm could be signed
+    /// with RSA parameters and fail with an opaque Security error.
+    var secKeyAlgorithm: SecKeyAlgorithm {
+        switch self {
+        case .sha256rsa: return .rsaSignatureMessagePKCS1v15SHA256
+        case .sha384rsa: return .rsaSignatureMessagePKCS1v15SHA384
+        case .sha512rsa: return .rsaSignatureMessagePKCS1v15SHA512
+        case .sha256ec: return .ecdsaSignatureMessageX962SHA256
+        case .sha384ec: return .ecdsaSignatureMessageX962SHA384
+        case .sha512ec: return .ecdsaSignatureMessageX962SHA512
+        }
+    }
+}
 
 /// iOS implementation of the felectronic_certificates plugin.
 ///
@@ -10,13 +30,6 @@ public class FelectronicCertificatesPlugin: NSObject, FlutterPlugin, Felectronic
     private let manager = KeychainCertificateManager()
 
     private static let defaultSerialKey = "felectronic_certificates_default_serial"
-
-    private let dateFormatter: DateFormatter = {
-        let fmt = DateFormatter()
-        fmt.dateFormat = "dd-MM-yyyy"
-        fmt.locale = Locale(identifier: "en_US_POSIX")
-        return fmt
-    }()
 
     // MARK: - FlutterPlugin
 
@@ -47,10 +60,13 @@ public class FelectronicCertificatesPlugin: NSObject, FlutterPlugin, Felectronic
             return
         }
 
+        // Serials persisted by earlier versions used the DER spelling
+        // (with the sign-pad byte), so compare canonically.
+        let wanted = KeychainCertificateManager.canonicalSerial(serial)
         let identities = manager.getAllIdentities()
         for (identity, attrs) in identities {
             if let info = manager.getCertificateInfo(identity: identity),
-               info.serialNumber == serial {
+               info.serialNumber == wanted {
                 completion(.success(mapToMessage(info: info, attrs: attrs)))
                 return
             }
@@ -98,13 +114,13 @@ public class FelectronicCertificatesPlugin: NSObject, FlutterPlugin, Felectronic
 
     func signWithDefaultCertificate(
         data: FlutterStandardTypedData,
-        algorithm: String,
+        algorithm: CertSignAlgorithmMessage,
         completion: @escaping (Result<FlutterStandardTypedData, any Error>) -> Void
     ) {
         guard let serial = UserDefaults.standard.string(
             forKey: FelectronicCertificatesPlugin.defaultSerialKey
         ) else {
-            completion(.failure(FlutterError(
+            completion(.failure(PigeonError(
                 code: "NotSelectedCertificate",
                 message: "No default certificate selected",
                 details: nil
@@ -112,29 +128,28 @@ public class FelectronicCertificatesPlugin: NSObject, FlutterPlugin, Felectronic
             return
         }
 
+        let wanted = KeychainCertificateManager.canonicalSerial(serial)
         let identities = manager.getAllIdentities()
         for (identity, _) in identities {
             if let info = manager.getCertificateInfo(identity: identity),
-               info.serialNumber == serial {
+               info.serialNumber == wanted {
                 do {
                     let signature = try manager.sign(
                         data: data.data,
-                        algorithm: algorithm,
+                        algorithm: algorithm.secKeyAlgorithm,
                         identity: identity
                     )
-                    completion(.success(FlutterStandardTypedData(bytes: signature)))
+                    completion(.success(
+                        FlutterStandardTypedData(bytes: signature)
+                    ))
                 } catch {
-                    completion(.failure(FlutterError(
-                        code: "SigningError",
-                        message: error.localizedDescription,
-                        details: nil
-                    )))
+                    completion(.failure(Self.pigeonError(from: error)))
                 }
                 return
             }
         }
 
-        completion(.failure(FlutterError(
+        completion(.failure(PigeonError(
             code: "CertificateNotFound",
             message: "Default certificate not found in Keychain",
             details: nil
@@ -154,29 +169,18 @@ public class FelectronicCertificatesPlugin: NSObject, FlutterPlugin, Felectronic
                 alias: alias
             )
             completion(.success(()))
-        } catch let error as NSError {
-            let code: String
-            switch error.localizedDescription {
-            case "IncorrectPassword":
-                code = "IncorrectPassword"
-            case "CertificateInKeyChain":
-                code = "CertificateInKeyChain"
-            default:
-                code = "UnknownError"
-            }
-            completion(.failure(FlutterError(
-                code: code,
-                message: error.localizedDescription,
-                details: nil
-            )))
+        } catch {
+            completion(.failure(Self.pigeonError(from: error)))
         }
     }
 
-    func deleteDefaultCertificate(completion: @escaping (Result<Void, any Error>) -> Void) {
+    func deleteDefaultCertificate(
+        completion: @escaping (Result<Void, any Error>) -> Void
+    ) {
         guard let serial = UserDefaults.standard.string(
             forKey: FelectronicCertificatesPlugin.defaultSerialKey
         ) else {
-            completion(.failure(FlutterError(
+            completion(.failure(PigeonError(
                 code: "NotSelectedCertificate",
                 message: "No default certificate selected",
                 details: nil
@@ -191,11 +195,7 @@ public class FelectronicCertificatesPlugin: NSObject, FlutterPlugin, Felectronic
             )
             completion(.success(()))
         } catch {
-            completion(.failure(FlutterError(
-                code: "CertificateNotFound",
-                message: error.localizedDescription,
-                details: nil
-            )))
+            completion(.failure(Self.pigeonError(from: error)))
         }
     }
 
@@ -206,43 +206,57 @@ public class FelectronicCertificatesPlugin: NSObject, FlutterPlugin, Felectronic
         do {
             try manager.deleteIdentity(serialNumber: serialNumber)
             // Clear default if it was the deleted certificate
-            if UserDefaults.standard.string(
+            let storedDefault = UserDefaults.standard.string(
                 forKey: FelectronicCertificatesPlugin.defaultSerialKey
-            ) == serialNumber {
+            )
+            if let stored = storedDefault,
+               KeychainCertificateManager.canonicalSerial(stored)
+                   == KeychainCertificateManager.canonicalSerial(serialNumber) {
                 UserDefaults.standard.removeObject(
                     forKey: FelectronicCertificatesPlugin.defaultSerialKey
                 )
             }
             completion(.success(()))
-        } catch let error as NSError {
-            let code = error.localizedDescription == "CertificateNotFound"
-                ? "CertificateNotFound"
-                : "UnknownError"
-            completion(.failure(FlutterError(
-                code: code,
-                message: error.localizedDescription,
-                details: nil
-            )))
+        } catch {
+            completion(.failure(Self.pigeonError(from: error)))
         }
     }
 
     // MARK: - Helpers
 
+    /// Translates a Swift error into the Pigeon error Dart maps to a
+    /// ``CertificateError``.
+    ///
+    /// ``CertificateFailure`` carries its own stable wire code; anything else
+    /// is reported as `UnknownError` rather than being guessed at from a
+    /// display string.
+    private static func pigeonError(from error: Error) -> PigeonError {
+        if let failure = error as? CertificateFailure {
+            return PigeonError(
+                code: failure.code,
+                message: failure.message,
+                details: nil
+            )
+        }
+        return PigeonError(
+            code: "UnknownError",
+            message: error.localizedDescription,
+            details: nil
+        )
+    }
+
+
+    /// Builds the Pigeon message from the natively-sourced facts.
+    ///
+    /// Only the serial, the Keychain label and the DER cross the boundary.
+    /// Dart decodes everything else from `encoded` via `felectronic_x509`.
     private func mapToMessage(
         info: CertificateInfo,
         attrs: [String: Any]
     ) -> DeviceCertificateMessage {
-        let alias = attrs[kSecAttrLabel as String] as? String
-        let usagesStr = info.usages.joined(separator: ";")
-        let expStr = dateFormatter.string(from: info.expirationDate)
-
         return DeviceCertificateMessage(
             serialNumber: info.serialNumber,
-            alias: alias,
-            holderName: info.holderName,
-            issuerName: info.issuerName,
-            expirationDate: expStr,
-            usages: usagesStr,
+            alias: attrs[kSecAttrLabel as String] as? String,
             encoded: FlutterStandardTypedData(bytes: info.encoded)
         )
     }

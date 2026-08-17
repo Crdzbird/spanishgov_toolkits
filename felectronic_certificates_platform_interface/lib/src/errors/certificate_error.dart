@@ -26,8 +26,8 @@ sealed class CertificateError implements Exception {
       'SigningError' => const CertSigningError(),
       'CertificateNotFound' => const CertNotFoundError(),
       _ => CertUnknownError(
-          exception.message ?? 'Unknown error: ${exception.code}',
-        ),
+        exception.message ?? 'Unknown error: ${exception.code}',
+      ),
     };
   }
 
@@ -35,14 +35,14 @@ sealed class CertificateError implements Exception {
   String toString() => '${_typeName(this)}: $message';
 
   static String _typeName(CertificateError error) => switch (error) {
-        CertNotSelectedError() => 'CertNotSelectedError',
-        CertImportCancelledError() => 'CertImportCancelledError',
-        CertIncorrectPasswordError() => 'CertIncorrectPasswordError',
-        CertAlreadyExistsError() => 'CertAlreadyExistsError',
-        CertSigningError() => 'CertSigningError',
-        CertNotFoundError() => 'CertNotFoundError',
-        CertUnknownError() => 'CertUnknownError',
-      };
+    CertNotSelectedError() => 'CertNotSelectedError',
+    CertImportCancelledError() => 'CertImportCancelledError',
+    CertIncorrectPasswordError() => 'CertIncorrectPasswordError',
+    CertAlreadyExistsError() => 'CertAlreadyExistsError',
+    CertSigningError() => 'CertSigningError',
+    CertNotFoundError() => 'CertNotFoundError',
+    CertUnknownError() => 'CertUnknownError',
+  };
 }
 
 /// {@template cert_not_selected_error}
@@ -51,7 +51,7 @@ sealed class CertificateError implements Exception {
 final class CertNotSelectedError extends CertificateError {
   /// {@macro cert_not_selected_error}
   const CertNotSelectedError()
-      : super('No certificate is currently selected as default.');
+    : super('No certificate is currently selected as default.');
 }
 
 /// {@template cert_import_cancelled_error}
@@ -59,8 +59,7 @@ final class CertNotSelectedError extends CertificateError {
 /// {@endtemplate}
 final class CertImportCancelledError extends CertificateError {
   /// {@macro cert_import_cancelled_error}
-  const CertImportCancelledError()
-      : super('Certificate import was cancelled.');
+  const CertImportCancelledError() : super('Certificate import was cancelled.');
 }
 
 /// {@template cert_incorrect_password_error}
@@ -69,7 +68,7 @@ final class CertImportCancelledError extends CertificateError {
 final class CertIncorrectPasswordError extends CertificateError {
   /// {@macro cert_incorrect_password_error}
   const CertIncorrectPasswordError()
-      : super('Incorrect password for the certificate file.');
+    : super('Incorrect password for the certificate file.');
 }
 
 /// {@template cert_already_exists_error}
@@ -78,7 +77,7 @@ final class CertIncorrectPasswordError extends CertificateError {
 final class CertAlreadyExistsError extends CertificateError {
   /// {@macro cert_already_exists_error}
   const CertAlreadyExistsError()
-      : super('Certificate already exists in the keychain.');
+    : super('Certificate already exists in the keychain.');
 }
 
 /// {@template cert_signing_error}
@@ -86,8 +85,7 @@ final class CertAlreadyExistsError extends CertificateError {
 /// {@endtemplate}
 final class CertSigningError extends CertificateError {
   /// {@macro cert_signing_error}
-  const CertSigningError()
-      : super('Failed to sign data with the certificate.');
+  const CertSigningError() : super('Failed to sign data with the certificate.');
 }
 
 /// {@template cert_not_found_error}
@@ -95,8 +93,7 @@ final class CertSigningError extends CertificateError {
 /// {@endtemplate}
 final class CertNotFoundError extends CertificateError {
   /// {@macro cert_not_found_error}
-  const CertNotFoundError()
-      : super('Certificate not found.');
+  const CertNotFoundError() : super('Certificate not found.');
 }
 
 /// {@template cert_unknown_error}

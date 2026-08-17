@@ -5,14 +5,29 @@ import 'package:felectronic_x509/felectronic_x509.dart';
 /// Convenience extensions on [DeviceCertificate].
 extension DeviceCertificateX on DeviceCertificate {
   /// Whether the certificate has expired.
-  bool get isExpired => expirationDate.isBefore(DateTime.now());
+  ///
+  /// `false` when [DeviceCertificate.expirationDate] is `null` — an unknown
+  /// expiry is not evidence of expiry. Check [hasKnownExpiry] when the
+  /// distinction matters.
+  bool get isExpired {
+    final expiry = expirationDate;
+    return expiry != null && expiry.isBefore(DateTime.now());
+  }
 
-  /// Days remaining until expiration. Negative if expired.
-  int get daysUntilExpiry =>
-      expirationDate.difference(DateTime.now()).inDays;
+  /// Whether the expiry date could be determined at all.
+  bool get hasKnownExpiry => expirationDate != null;
+
+  /// Days remaining until expiration, negative if expired, `null` if the
+  /// expiry is unknown.
+  int? get daysUntilExpiry => expirationDate?.difference(DateTime.now()).inDays;
 
   /// Whether the certificate expires within 30 days.
-  bool get isExpiringSoon => !isExpired && daysUntilExpiry <= 30;
+  ///
+  /// `false` when the expiry is unknown.
+  bool get isExpiringSoon {
+    final days = daysUntilExpiry;
+    return !isExpired && days != null && days <= 30;
+  }
 
   /// Whether the certificate can be used for signing.
   bool get canSign => usages.contains(CertKeyUsage.signing);
@@ -24,16 +39,16 @@ extension DeviceCertificateX on DeviceCertificate {
   bool get canEncrypt => usages.contains(CertKeyUsage.encryption);
 
   /// Human-readable usage summary (e.g. "Signing, Authentication").
-  String get usageSummary =>
-      usages.map((u) => u.label).join(', ');
+  String get usageSummary => usages.map((u) => u.label).join(', ');
 
   /// Display name — alias if set, otherwise holder name.
   String get displayName => alias ?? holderName;
 
   /// Human-readable expiry status.
   String get expiryStatus {
-    if (isExpired) return 'Expired';
     final days = daysUntilExpiry;
+    if (days == null) return 'Expiry unknown';
+    if (isExpired) return 'Expired';
     if (days == 0) return 'Expires today';
     if (days == 1) return 'Expires tomorrow';
     return 'Expires in $days days';
@@ -44,10 +59,10 @@ extension DeviceCertificateX on DeviceCertificate {
 extension CertKeyUsageLabel on CertKeyUsage {
   /// Human-readable label.
   String get label => switch (this) {
-        CertKeyUsage.signing => 'Signing',
-        CertKeyUsage.authentication => 'Authentication',
-        CertKeyUsage.encryption => 'Encryption',
-      };
+    CertKeyUsage.signing => 'Signing',
+    CertKeyUsage.authentication => 'Authentication',
+    CertKeyUsage.encryption => 'Encryption',
+  };
 }
 
 /// Parses the full X.509 certificate from the DER-encoded [encoded] bytes.

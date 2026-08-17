@@ -193,24 +193,57 @@ class FlutterError (
 ) : Throwable()
 
 /**
+ * Signing algorithms supported for certificate-based signatures.
+ *
+ * Sent as a typed enum rather than a string so an unrecognised value is a
+ * deserialisation error at the boundary instead of silently degrading to a
+ * default algorithm on the native side.
+ */
+enum class CertSignAlgorithmMessage(val raw: Int) {
+  SHA256RSA(0),
+  SHA384RSA(1),
+  SHA512RSA(2),
+  SHA256EC(3),
+  SHA384EC(4),
+  SHA512EC(5);
+
+  companion object {
+    fun ofRaw(raw: Int): CertSignAlgorithmMessage? {
+      return values().firstOrNull { it.raw == raw }
+    }
+  }
+}
+
+/**
  * A device-stored certificate transferred between native and Dart layers.
+ *
+ * Carries only what the platform keystore alone can supply. Everything that
+ * can be derived from the certificate itself — subject CN, issuer CN,
+ * validity, key usage — is decoded once in Dart from [encoded] by
+ * `felectronic_x509`, so Android and iOS cannot report different values for
+ * the same certificate.
  *
  * Generated class from Pigeon that represents data sent in messages.
  */
 data class DeviceCertificateMessage (
-  /** Certificate serial number (hex string). */
+  /**
+   * Certificate serial number, canonically encoded.
+   *
+   * Lowercase hex of the serial's magnitude: no DER sign-padding byte, no
+   * leading zeros, and `"0"` for a zero serial. Both platforms must emit
+   * this exact form, and both must compare incoming serials in this form —
+   * it is the keystore lookup key, and values persisted by earlier versions
+   * used platform-specific spellings.
+   */
   val serialNumber: String,
-  /** Optional alias / label assigned to the certificate. */
+  /**
+   * Keystore label for this certificate, if one was assigned.
+   *
+   * Not part of the certificate — it exists only in the keystore, which is
+   * why it still crosses the boundary.
+   */
   val alias: String? = null,
-  /** Holder (subject) common name. */
-  val holderName: String,
-  /** Issuer common name. */
-  val issuerName: String,
-  /** Expiration date formatted as dd-MM-yyyy. */
-  val expirationDate: String,
-  /** Semicolon-separated key usages, e.g. "SIGNING;AUTHENTICATION". */
-  val usages: String,
-  /** DER-encoded certificate bytes. */
+  /** DER-encoded certificate: the source of truth for every other field. */
   val encoded: ByteArray
 )
  {
@@ -218,22 +251,14 @@ data class DeviceCertificateMessage (
     fun fromList(pigeonVar_list: List<Any?>): DeviceCertificateMessage {
       val serialNumber = pigeonVar_list[0] as String
       val alias = pigeonVar_list[1] as String?
-      val holderName = pigeonVar_list[2] as String
-      val issuerName = pigeonVar_list[3] as String
-      val expirationDate = pigeonVar_list[4] as String
-      val usages = pigeonVar_list[5] as String
-      val encoded = pigeonVar_list[6] as ByteArray
-      return DeviceCertificateMessage(serialNumber, alias, holderName, issuerName, expirationDate, usages, encoded)
+      val encoded = pigeonVar_list[2] as ByteArray
+      return DeviceCertificateMessage(serialNumber, alias, encoded)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
       serialNumber,
       alias,
-      holderName,
-      issuerName,
-      expirationDate,
-      usages,
       encoded,
     )
   }
@@ -245,17 +270,13 @@ data class DeviceCertificateMessage (
       return true
     }
     val other = other as DeviceCertificateMessage
-    return MessagesPigeonUtils.deepEquals(this.serialNumber, other.serialNumber) && MessagesPigeonUtils.deepEquals(this.alias, other.alias) && MessagesPigeonUtils.deepEquals(this.holderName, other.holderName) && MessagesPigeonUtils.deepEquals(this.issuerName, other.issuerName) && MessagesPigeonUtils.deepEquals(this.expirationDate, other.expirationDate) && MessagesPigeonUtils.deepEquals(this.usages, other.usages) && MessagesPigeonUtils.deepEquals(this.encoded, other.encoded)
+    return MessagesPigeonUtils.deepEquals(this.serialNumber, other.serialNumber) && MessagesPigeonUtils.deepEquals(this.alias, other.alias) && MessagesPigeonUtils.deepEquals(this.encoded, other.encoded)
   }
 
   override fun hashCode(): Int {
     var result = javaClass.hashCode()
     result = 31 * result + MessagesPigeonUtils.deepHash(this.serialNumber)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.alias)
-    result = 31 * result + MessagesPigeonUtils.deepHash(this.holderName)
-    result = 31 * result + MessagesPigeonUtils.deepHash(this.issuerName)
-    result = 31 * result + MessagesPigeonUtils.deepHash(this.expirationDate)
-    result = 31 * result + MessagesPigeonUtils.deepHash(this.usages)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.encoded)
     return result
   }
@@ -264,6 +285,11 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
       129.toByte() -> {
+        return (readValue(buffer) as Long?)?.let {
+          CertSignAlgorithmMessage.ofRaw(it.toInt())
+        }
+      }
+      130.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           DeviceCertificateMessage.fromList(it)
         }
@@ -273,8 +299,12 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
   }
   override fun writeValue(stream: ByteArrayOutputStream, value: Any?)   {
     when (value) {
-      is DeviceCertificateMessage -> {
+      is CertSignAlgorithmMessage -> {
         stream.write(129)
+        writeValue(stream, value.raw.toLong())
+      }
+      is DeviceCertificateMessage -> {
+        stream.write(130)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -296,17 +326,17 @@ interface FelectronicCertificatesHostApi {
   fun getDefaultCertificate(callback: (Result<DeviceCertificateMessage?>) -> Unit)
   /** Opens a native certificate picker and returns the selected certificate. */
   fun selectDefaultCertificate(callback: (Result<DeviceCertificateMessage?>) -> Unit)
-  /** Sets the default certificate by its serial number. */
+  /**
+   * Sets the default certificate by its serial number.
+   *
+   * [serialNumber] is compared in canonical form, so serials persisted by
+   * earlier versions still resolve.
+   */
   fun setDefaultCertificateBySerialNumber(serialNumber: String, callback: (Result<Unit>) -> Unit)
   /** Clears the default certificate selection. */
   fun clearDefaultCertificate(callback: (Result<Unit>) -> Unit)
-  /**
-   * Signs [data] using the default certificate's private key.
-   *
-   * [algorithm] is one of: SHA256RSA, SHA384RSA, SHA512RSA,
-   * SHA256EC, SHA384EC, SHA512EC.
-   */
-  fun signWithDefaultCertificate(data: ByteArray, algorithm: String, callback: (Result<ByteArray>) -> Unit)
+  /** Signs [data] using the default certificate's private key. */
+  fun signWithDefaultCertificate(data: ByteArray, algorithm: CertSignAlgorithmMessage, callback: (Result<ByteArray>) -> Unit)
   /** Imports a PKCS#12 (.p12/.pfx) file into the device keystore. */
   fun importCertificate(pkcs12Data: ByteArray, password: String?, alias: String?, callback: (Result<Unit>) -> Unit)
   /** Deletes the currently selected default certificate. */
@@ -419,7 +449,7 @@ interface FelectronicCertificatesHostApi {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
             val dataArg = args[0] as ByteArray
-            val algorithmArg = args[1] as String
+            val algorithmArg = args[1] as CertSignAlgorithmMessage
             api.signWithDefaultCertificate(dataArg, algorithmArg) { result: Result<ByteArray> ->
               val error = result.exceptionOrNull()
               if (error != null) {

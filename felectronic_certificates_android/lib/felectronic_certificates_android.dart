@@ -11,8 +11,7 @@ class FelectronicCertificatesAndroid extends FelectronicCertificatesPlatform {
   /// Registers this class as the default instance of
   /// [FelectronicCertificatesPlatform].
   static void registerWith() {
-    FelectronicCertificatesPlatform.instance =
-        FelectronicCertificatesAndroid();
+    FelectronicCertificatesPlatform.instance = FelectronicCertificatesAndroid();
   }
 
   @override
@@ -53,7 +52,9 @@ class FelectronicCertificatesAndroid extends FelectronicCertificatesPlatform {
     String serialNumber,
   ) async {
     try {
-      await api.setDefaultCertificateBySerialNumber(serialNumber);
+      await api.setDefaultCertificateBySerialNumber(
+        CertificateSerial.canonical(serialNumber),
+      );
     } on PlatformException catch (e) {
       throw CertificateError.fromPlatformException(e);
     }
@@ -74,7 +75,7 @@ class FelectronicCertificatesAndroid extends FelectronicCertificatesPlatform {
     CertSignAlgorithm algorithm = CertSignAlgorithm.sha256rsa,
   }) async {
     try {
-      return await api.signWithDefaultCertificate(data, algorithm.value);
+      return await api.signWithDefaultCertificate(data, algorithm.wire);
     } on PlatformException catch (e) {
       throw CertificateError.fromPlatformException(e);
     }
@@ -105,28 +106,14 @@ class FelectronicCertificatesAndroid extends FelectronicCertificatesPlatform {
   @override
   Future<void> deleteCertificateBySerialNumber(String serialNumber) async {
     try {
-      await api.deleteCertificateBySerialNumber(serialNumber);
+      await api.deleteCertificateBySerialNumber(
+        CertificateSerial.canonical(serialNumber),
+      );
     } on PlatformException catch (e) {
       throw CertificateError.fromPlatformException(e);
     }
   }
 
-  DeviceCertificate _toCertificate(DeviceCertificateMessage message) {
-    final parts = message.expirationDate.split('-');
-    final expiration = DateTime(
-      int.parse(parts[2]),
-      int.parse(parts[1]),
-      int.parse(parts[0]),
-    );
-
-    return DeviceCertificate(
-      serialNumber: message.serialNumber,
-      alias: message.alias,
-      holderName: message.holderName,
-      issuerName: message.issuerName,
-      expirationDate: expiration,
-      usages: CertKeyUsage.parseUsages(message.usages),
-      encoded: message.encoded,
-    );
-  }
+  DeviceCertificate _toCertificate(DeviceCertificateMessage message) =>
+      DeviceCertificate.fromMessage(message);
 }

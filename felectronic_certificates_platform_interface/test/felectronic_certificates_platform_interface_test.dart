@@ -14,8 +14,9 @@ class FelectronicCertificatesMock extends FelectronicCertificatesPlatform {
   );
 
   @override
-  Future<List<DeviceCertificate>> getAllCertificates() async =>
-      [mockCertificate];
+  Future<List<DeviceCertificate>> getAllCertificates() async => [
+    mockCertificate,
+  ];
 
   @override
   Future<DeviceCertificate?> getDefaultCertificate() async => mockCertificate;
@@ -36,8 +37,7 @@ class FelectronicCertificatesMock extends FelectronicCertificatesPlatform {
   Future<Uint8List> signWithDefaultCertificate(
     Uint8List data, {
     CertSignAlgorithm algorithm = CertSignAlgorithm.sha256rsa,
-  }) async =>
-      Uint8List.fromList([10, 20]);
+  }) async => Uint8List.fromList([10, 20]);
 
   @override
   Future<void> importCertificate(
@@ -66,8 +66,8 @@ void main() {
 
     group('getAllCertificates', () {
       test('returns list of certificates', () async {
-        final result =
-            await FelectronicCertificatesPlatform.instance.getAllCertificates();
+        final result = await FelectronicCertificatesPlatform.instance
+            .getAllCertificates();
         expect(result, hasLength(1));
         expect(result.first.serialNumber, 'abc123');
       });
@@ -110,8 +110,9 @@ void main() {
     group('importCertificate', () {
       test('completes without error', () async {
         await expectLater(
-          FelectronicCertificatesPlatform.instance
-              .importCertificate(Uint8List.fromList([1, 2, 3])),
+          FelectronicCertificatesPlatform.instance.importCertificate(
+            Uint8List.fromList([1, 2, 3]),
+          ),
           completes,
         );
       });

@@ -3,6 +3,8 @@ import 'package:felectronic_certificates_platform_interface/src/method_channel_f
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../fixtures/certificate_fixtures.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -20,22 +22,19 @@ void main() {
       mockApi.allCertificatesResult = [
         DeviceCertificateMessage(
           serialNumber: 'abc123',
-          holderName: 'GARCIA, JUAN',
-          issuerName: 'FNMT',
-          expirationDate: '31-12-2030',
-          usages: 'SIGNING;AUTHENTICATION',
-          encoded: Uint8List.fromList([1, 2, 3]),
+          encoded: expiredCertDer,
         ),
       ];
 
       final result = await platform.getAllCertificates();
       expect(result, hasLength(1));
       expect(result.first.serialNumber, 'abc123');
-      expect(result.first.holderName, 'GARCIA, JUAN');
-      expect(result.first.expirationDate, DateTime(2030, 12, 31));
+      // Names, expiry and usages all come out of the DER now.
+      expect(result.first.holderName, 'CADUCADO - GARCIA GARCIA, JUAN');
+      expect(result.first.expirationDate, DateTime.utc(2021));
       expect(
         result.first.usages,
-        [CertKeyUsage.signing, CertKeyUsage.authentication],
+        [CertKeyUsage.authentication, CertKeyUsage.signing],
       );
     });
 
@@ -43,11 +42,7 @@ void main() {
       mockApi.allCertificatesResult = [
         DeviceCertificateMessage(
           serialNumber: 'abc123',
-          holderName: 'GARCIA, JUAN',
-          issuerName: 'FNMT',
-          expirationDate: '31-12-2030',
-          usages: 'SIGNING',
-          encoded: Uint8List.fromList([1, 2, 3]),
+          encoded: signingCertDer,
         ),
         null,
       ];
@@ -60,11 +55,7 @@ void main() {
       mockApi.defaultCertificateResult = DeviceCertificateMessage(
         serialNumber: 'def456',
         alias: 'My Cert',
-        holderName: 'LOPEZ, MARIA',
-        issuerName: 'FNMT',
-        expirationDate: '15-06-2028',
-        usages: 'AUTHENTICATION',
-        encoded: Uint8List.fromList([4, 5, 6]),
+        encoded: authCertDer,
       );
 
       final result = await platform.getDefaultCertificate();
@@ -84,11 +75,7 @@ void main() {
     test('selectDefaultCertificate returns certificate', () async {
       mockApi.selectCertificateResult = DeviceCertificateMessage(
         serialNumber: 'ghi789',
-        holderName: 'PEREZ, CARLOS',
-        issuerName: 'FNMT',
-        expirationDate: '01-01-2029',
-        usages: 'ENCRYPTION',
-        encoded: Uint8List.fromList([7, 8, 9]),
+        encoded: encryptionCertDer,
       );
 
       final result = await platform.selectDefaultCertificate();
@@ -113,7 +100,7 @@ void main() {
         Uint8List.fromList([42]),
       );
       expect(result, Uint8List.fromList([10, 20, 30]));
-      expect(mockApi.lastSignAlgorithm, 'SHA256RSA');
+      expect(mockApi.lastSignAlgorithm, CertSignAlgorithmMessage.sha256rsa);
     });
 
     test('signWithDefaultCertificate passes SHA512EC', () async {
@@ -123,7 +110,7 @@ void main() {
         Uint8List.fromList([42]),
         algorithm: CertSignAlgorithm.sha512ec,
       );
-      expect(mockApi.lastSignAlgorithm, 'SHA512EC');
+      expect(mockApi.lastSignAlgorithm, CertSignAlgorithmMessage.sha512ec);
     });
 
     test('signWithDefaultCertificate throws CertSigningError', () async {
@@ -194,7 +181,7 @@ class _MockHostApi implements FelectronicCertificatesHostApi {
 
   String? lastSetSerial;
   bool clearDefaultCalled = false;
-  String? lastSignAlgorithm;
+  CertSignAlgorithmMessage? lastSignAlgorithm;
   String? lastImportPassword;
   String? lastImportAlias;
   bool deleteDefaultCalled = false;
@@ -235,7 +222,7 @@ class _MockHostApi implements FelectronicCertificatesHostApi {
   @override
   Future<Uint8List> signWithDefaultCertificate(
     Uint8List data,
-    String algorithm,
+    CertSignAlgorithmMessage algorithm,
   ) async {
     lastSignAlgorithm = algorithm;
     if (signError != null) throw signError!;

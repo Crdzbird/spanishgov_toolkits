@@ -10,7 +10,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:felectronic_certificates_platform_interface/src/generated/messages.g.dart';
 
-
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
   @override
@@ -18,7 +17,7 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is DeviceCertificateMessage) {
+    } else if (value is DeviceCertificateMessage) {
       buffer.putUint8(129);
       writeValue(buffer, value.encode());
     } else {

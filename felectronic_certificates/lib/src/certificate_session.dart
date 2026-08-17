@@ -49,8 +49,7 @@ class CertificateSession {
   Future<Uint8List> sign(
     Uint8List data, {
     CertSignAlgorithm algorithm = CertSignAlgorithm.sha256rsa,
-  }) =>
-      _platform.signWithDefaultCertificate(data, algorithm: algorithm);
+  }) => _platform.signWithDefaultCertificate(data, algorithm: algorithm);
 
   /// Deletes this certificate from the device keystore.
   Future<void> delete() =>

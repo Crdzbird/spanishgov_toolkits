@@ -174,23 +174,44 @@ func deepHashMessages(value: Any?, hasher: inout Hasher) {
 }
 
 
+/// Signing algorithms supported for certificate-based signatures.
+///
+/// Sent as a typed enum rather than a string so an unrecognised value is a
+/// deserialisation error at the boundary instead of silently degrading to a
+/// default algorithm on the native side.
+enum CertSignAlgorithmMessage: Int {
+  case sha256rsa = 0
+  case sha384rsa = 1
+  case sha512rsa = 2
+  case sha256ec = 3
+  case sha384ec = 4
+  case sha512ec = 5
+}
+
 /// A device-stored certificate transferred between native and Dart layers.
+///
+/// Carries only what the platform keystore alone can supply. Everything that
+/// can be derived from the certificate itself — subject CN, issuer CN,
+/// validity, key usage — is decoded once in Dart from [encoded] by
+/// `felectronic_x509`, so Android and iOS cannot report different values for
+/// the same certificate.
 ///
 /// Generated class from Pigeon that represents data sent in messages.
 struct DeviceCertificateMessage: Hashable {
-  /// Certificate serial number (hex string).
+  /// Certificate serial number, canonically encoded.
+  ///
+  /// Lowercase hex of the serial's magnitude: no DER sign-padding byte, no
+  /// leading zeros, and `"0"` for a zero serial. Both platforms must emit
+  /// this exact form, and both must compare incoming serials in this form —
+  /// it is the keystore lookup key, and values persisted by earlier versions
+  /// used platform-specific spellings.
   var serialNumber: String
-  /// Optional alias / label assigned to the certificate.
+  /// Keystore label for this certificate, if one was assigned.
+  ///
+  /// Not part of the certificate — it exists only in the keystore, which is
+  /// why it still crosses the boundary.
   var alias: String? = nil
-  /// Holder (subject) common name.
-  var holderName: String
-  /// Issuer common name.
-  var issuerName: String
-  /// Expiration date formatted as dd-MM-yyyy.
-  var expirationDate: String
-  /// Semicolon-separated key usages, e.g. "SIGNING;AUTHENTICATION".
-  var usages: String
-  /// DER-encoded certificate bytes.
+  /// DER-encoded certificate: the source of truth for every other field.
   var encoded: FlutterStandardTypedData
 
 
@@ -198,19 +219,11 @@ struct DeviceCertificateMessage: Hashable {
   static func fromList(_ pigeonVar_list: [Any?]) -> DeviceCertificateMessage? {
     let serialNumber = pigeonVar_list[0] as! String
     let alias: String? = nilOrValue(pigeonVar_list[1])
-    let holderName = pigeonVar_list[2] as! String
-    let issuerName = pigeonVar_list[3] as! String
-    let expirationDate = pigeonVar_list[4] as! String
-    let usages = pigeonVar_list[5] as! String
-    let encoded = pigeonVar_list[6] as! FlutterStandardTypedData
+    let encoded = pigeonVar_list[2] as! FlutterStandardTypedData
 
     return DeviceCertificateMessage(
       serialNumber: serialNumber,
       alias: alias,
-      holderName: holderName,
-      issuerName: issuerName,
-      expirationDate: expirationDate,
-      usages: usages,
       encoded: encoded
     )
   }
@@ -218,10 +231,6 @@ struct DeviceCertificateMessage: Hashable {
     return [
       serialNumber,
       alias,
-      holderName,
-      issuerName,
-      expirationDate,
-      usages,
       encoded,
     ]
   }
@@ -229,17 +238,13 @@ struct DeviceCertificateMessage: Hashable {
     if Swift.type(of: lhs) != Swift.type(of: rhs) {
       return false
     }
-    return deepEqualsMessages(lhs.serialNumber, rhs.serialNumber) && deepEqualsMessages(lhs.alias, rhs.alias) && deepEqualsMessages(lhs.holderName, rhs.holderName) && deepEqualsMessages(lhs.issuerName, rhs.issuerName) && deepEqualsMessages(lhs.expirationDate, rhs.expirationDate) && deepEqualsMessages(lhs.usages, rhs.usages) && deepEqualsMessages(lhs.encoded, rhs.encoded)
+    return deepEqualsMessages(lhs.serialNumber, rhs.serialNumber) && deepEqualsMessages(lhs.alias, rhs.alias) && deepEqualsMessages(lhs.encoded, rhs.encoded)
   }
 
   func hash(into hasher: inout Hasher) {
     hasher.combine("DeviceCertificateMessage")
     deepHashMessages(value: serialNumber, hasher: &hasher)
     deepHashMessages(value: alias, hasher: &hasher)
-    deepHashMessages(value: holderName, hasher: &hasher)
-    deepHashMessages(value: issuerName, hasher: &hasher)
-    deepHashMessages(value: expirationDate, hasher: &hasher)
-    deepHashMessages(value: usages, hasher: &hasher)
     deepHashMessages(value: encoded, hasher: &hasher)
   }
 }
@@ -248,6 +253,12 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
   override func readValue(ofType type: UInt8) -> Any? {
     switch type {
     case 129:
+      let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
+      if let enumResultAsInt = enumResultAsInt {
+        return CertSignAlgorithmMessage(rawValue: enumResultAsInt)
+      }
+      return nil
+    case 130:
       return DeviceCertificateMessage.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
@@ -257,8 +268,11 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
 
 private class MessagesPigeonCodecWriter: FlutterStandardWriter {
   override func writeValue(_ value: Any) {
-    if let value = value as? DeviceCertificateMessage {
+    if let value = value as? CertSignAlgorithmMessage {
       super.writeByte(129)
+      super.writeValue(value.rawValue)
+    } else if let value = value as? DeviceCertificateMessage {
+      super.writeByte(130)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -293,14 +307,14 @@ protocol FelectronicCertificatesHostApi {
   /// Opens a native certificate picker and returns the selected certificate.
   func selectDefaultCertificate(completion: @escaping (Result<DeviceCertificateMessage?, Error>) -> Void)
   /// Sets the default certificate by its serial number.
+  ///
+  /// [serialNumber] is compared in canonical form, so serials persisted by
+  /// earlier versions still resolve.
   func setDefaultCertificateBySerialNumber(serialNumber: String, completion: @escaping (Result<Void, Error>) -> Void)
   /// Clears the default certificate selection.
   func clearDefaultCertificate(completion: @escaping (Result<Void, Error>) -> Void)
   /// Signs [data] using the default certificate's private key.
-  ///
-  /// [algorithm] is one of: SHA256RSA, SHA384RSA, SHA512RSA,
-  /// SHA256EC, SHA384EC, SHA512EC.
-  func signWithDefaultCertificate(data: FlutterStandardTypedData, algorithm: String, completion: @escaping (Result<FlutterStandardTypedData, Error>) -> Void)
+  func signWithDefaultCertificate(data: FlutterStandardTypedData, algorithm: CertSignAlgorithmMessage, completion: @escaping (Result<FlutterStandardTypedData, Error>) -> Void)
   /// Imports a PKCS#12 (.p12/.pfx) file into the device keystore.
   func importCertificate(pkcs12Data: FlutterStandardTypedData, password: String?, alias: String?, completion: @escaping (Result<Void, Error>) -> Void)
   /// Deletes the currently selected default certificate.
@@ -364,6 +378,9 @@ class FelectronicCertificatesHostApiSetup {
       selectDefaultCertificateChannel.setMessageHandler(nil)
     }
     /// Sets the default certificate by its serial number.
+    ///
+    /// [serialNumber] is compared in canonical form, so serials persisted by
+    /// earlier versions still resolve.
     let setDefaultCertificateBySerialNumberChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.setDefaultCertificateBySerialNumber\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       setDefaultCertificateBySerialNumberChannel.setMessageHandler { message, reply in
@@ -398,15 +415,12 @@ class FelectronicCertificatesHostApiSetup {
       clearDefaultCertificateChannel.setMessageHandler(nil)
     }
     /// Signs [data] using the default certificate's private key.
-    ///
-    /// [algorithm] is one of: SHA256RSA, SHA384RSA, SHA512RSA,
-    /// SHA256EC, SHA384EC, SHA512EC.
     let signWithDefaultCertificateChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.signWithDefaultCertificate\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       signWithDefaultCertificateChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
         let dataArg = args[0] as! FlutterStandardTypedData
-        let algorithmArg = args[1] as! String
+        let algorithmArg = args[1] as! CertSignAlgorithmMessage
         api.signWithDefaultCertificate(data: dataArg, algorithm: algorithmArg) { result in
           switch result {
           case .success(let res):

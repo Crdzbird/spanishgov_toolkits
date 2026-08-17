@@ -10,9 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:meta/meta.dart' show immutable, protected, visibleForTesting;
 
 Object? _extractReplyValueOrThrow(
-    List<Object?>? replyList,
-    String channelName, {
-    required bool isNullValid,
+  List<Object?>? replyList,
+  String channelName, {
+  required bool isNullValid,
 }) {
   if (replyList == null) {
     throw PlatformException(
@@ -46,8 +46,9 @@ bool _deepEquals(Object? a, Object? b) {
   }
   if (a is List && b is List) {
     return a.length == b.length &&
-        a.indexed
-            .every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
+        a.indexed.every(
+          ((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]),
+        );
   }
   if (a is Map && b is Map) {
     if (a.length != b.length) {
@@ -96,85 +97,92 @@ int _deepHash(Object? value) {
   return value.hashCode;
 }
 
+/// Signing algorithms supported for certificate-based signatures.
+///
+/// Sent as a typed enum rather than a string so an unrecognised value is a
+/// deserialisation error at the boundary instead of silently degrading to a
+/// default algorithm on the native side.
+enum CertSignAlgorithmMessage {
+  sha256rsa,
+  sha384rsa,
+  sha512rsa,
+  sha256ec,
+  sha384ec,
+  sha512ec,
+}
 
 /// A device-stored certificate transferred between native and Dart layers.
+///
+/// Carries only what the platform keystore alone can supply. Everything that
+/// can be derived from the certificate itself — subject CN, issuer CN,
+/// validity, key usage — is decoded once in Dart from [encoded] by
+/// `felectronic_x509`, so Android and iOS cannot report different values for
+/// the same certificate.
 class DeviceCertificateMessage {
   DeviceCertificateMessage({
     required this.serialNumber,
     this.alias,
-    required this.holderName,
-    required this.issuerName,
-    required this.expirationDate,
-    required this.usages,
     required this.encoded,
   });
 
-  /// Certificate serial number (hex string).
+  /// Certificate serial number, canonically encoded.
+  ///
+  /// Lowercase hex of the serial's magnitude: no DER sign-padding byte, no
+  /// leading zeros, and `"0"` for a zero serial. Both platforms must emit
+  /// this exact form, and both must compare incoming serials in this form —
+  /// it is the keystore lookup key, and values persisted by earlier versions
+  /// used platform-specific spellings.
   String serialNumber;
 
-  /// Optional alias / label assigned to the certificate.
+  /// Keystore label for this certificate, if one was assigned.
+  ///
+  /// Not part of the certificate — it exists only in the keystore, which is
+  /// why it still crosses the boundary.
   String? alias;
 
-  /// Holder (subject) common name.
-  String holderName;
-
-  /// Issuer common name.
-  String issuerName;
-
-  /// Expiration date formatted as dd-MM-yyyy.
-  String expirationDate;
-
-  /// Semicolon-separated key usages, e.g. "SIGNING;AUTHENTICATION".
-  String usages;
-
-  /// DER-encoded certificate bytes.
+  /// DER-encoded certificate: the source of truth for every other field.
   Uint8List encoded;
 
   List<Object?> _toList() {
     return <Object?>[
       serialNumber,
       alias,
-      holderName,
-      issuerName,
-      expirationDate,
-      usages,
       encoded,
     ];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static DeviceCertificateMessage decode(Object result) {
     result as List<Object?>;
     return DeviceCertificateMessage(
       serialNumber: result[0]! as String,
       alias: result[1] as String?,
-      holderName: result[2]! as String,
-      issuerName: result[3]! as String,
-      expirationDate: result[4]! as String,
-      usages: result[5]! as String,
-      encoded: result[6]! as Uint8List,
+      encoded: result[2]! as Uint8List,
     );
   }
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   bool operator ==(Object other) {
-    if (other is! DeviceCertificateMessage || other.runtimeType != runtimeType) {
+    if (other is! DeviceCertificateMessage ||
+        other.runtimeType != runtimeType) {
       return false;
     }
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(serialNumber, other.serialNumber) && _deepEquals(alias, other.alias) && _deepEquals(holderName, other.holderName) && _deepEquals(issuerName, other.issuerName) && _deepEquals(expirationDate, other.expirationDate) && _deepEquals(usages, other.usages) && _deepEquals(encoded, other.encoded);
+    return _deepEquals(serialNumber, other.serialNumber) &&
+        _deepEquals(alias, other.alias) &&
+        _deepEquals(encoded, other.encoded);
   }
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
 }
-
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -183,8 +191,11 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is DeviceCertificateMessage) {
+    } else if (value is CertSignAlgorithmMessage) {
       buffer.putUint8(129);
+      writeValue(buffer, value.index);
+    } else if (value is DeviceCertificateMessage) {
+      buffer.putUint8(130);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -195,6 +206,9 @@ class _PigeonCodec extends StandardMessageCodec {
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
       case 129:
+        final value = readValue(buffer) as int?;
+        return value == null ? null : CertSignAlgorithmMessage.values[value];
+      case 130:
         return DeviceCertificateMessage.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -208,9 +222,13 @@ class FelectronicCertificatesHostApi {
   /// Constructor for [FelectronicCertificatesHostApi].  The [binaryMessenger] named argument is
   /// available for dependency injection.  If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
-  FelectronicCertificatesHostApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
-      : pigeonVar_binaryMessenger = binaryMessenger,
-        pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+  FelectronicCertificatesHostApi({
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) : pigeonVar_binaryMessenger = binaryMessenger,
+       pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty
+           ? '.$messageChannelSuffix'
+           : '';
   final BinaryMessenger? pigeonVar_binaryMessenger;
 
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
@@ -219,7 +237,8 @@ class FelectronicCertificatesHostApi {
 
   /// Returns all certificates stored on the device.
   Future<List<DeviceCertificateMessage?>> getAllCertificates() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.getAllCertificates$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.getAllCertificates$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -229,17 +248,18 @@ class FelectronicCertificatesHostApi {
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
-    return (pigeonVar_replyValue! as List<Object?>).cast<DeviceCertificateMessage?>();
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return (pigeonVar_replyValue! as List<Object?>)
+        .cast<DeviceCertificateMessage?>();
   }
 
   /// Returns the currently selected default certificate, if any.
   Future<DeviceCertificateMessage?> getDefaultCertificate() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.getDefaultCertificate$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.getDefaultCertificate$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -249,17 +269,17 @@ class FelectronicCertificatesHostApi {
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: true,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
     return pigeonVar_replyValue as DeviceCertificateMessage?;
   }
 
   /// Opens a native certificate picker and returns the selected certificate.
   Future<DeviceCertificateMessage?> selectDefaultCertificate() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.selectDefaultCertificate$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.selectDefaultCertificate$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -269,36 +289,41 @@ class FelectronicCertificatesHostApi {
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: true,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
     return pigeonVar_replyValue as DeviceCertificateMessage?;
   }
 
   /// Sets the default certificate by its serial number.
+  ///
+  /// [serialNumber] is compared in canonical form, so serials persisted by
+  /// earlier versions still resolve.
   Future<void> setDefaultCertificateBySerialNumber(String serialNumber) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.setDefaultCertificateBySerialNumber$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.setDefaultCertificateBySerialNumber$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[serialNumber]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[serialNumber],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: true,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 
   /// Clears the default certificate selection.
   Future<void> clearDefaultCertificate() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.clearDefaultCertificate$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.clearDefaultCertificate$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -308,58 +333,66 @@ class FelectronicCertificatesHostApi {
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: true,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 
   /// Signs [data] using the default certificate's private key.
-  ///
-  /// [algorithm] is one of: SHA256RSA, SHA384RSA, SHA512RSA,
-  /// SHA256EC, SHA384EC, SHA512EC.
-  Future<Uint8List> signWithDefaultCertificate(Uint8List data, String algorithm) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.signWithDefaultCertificate$pigeonVar_messageChannelSuffix';
+  Future<Uint8List> signWithDefaultCertificate(
+    Uint8List data,
+    CertSignAlgorithmMessage algorithm,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.signWithDefaultCertificate$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[data, algorithm]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[data, algorithm],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as Uint8List;
   }
 
   /// Imports a PKCS#12 (.p12/.pfx) file into the device keystore.
-  Future<void> importCertificate(Uint8List pkcs12Data, String? password, String? alias) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.importCertificate$pigeonVar_messageChannelSuffix';
+  Future<void> importCertificate(
+    Uint8List pkcs12Data,
+    String? password,
+    String? alias,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.importCertificate$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[pkcs12Data, password, alias]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[pkcs12Data, password, alias],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: true,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 
   /// Deletes the currently selected default certificate.
   Future<void> deleteDefaultCertificate() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.deleteDefaultCertificate$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.deleteDefaultCertificate$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -369,29 +402,30 @@ class FelectronicCertificatesHostApi {
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: true,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 
   /// Deletes a certificate identified by its serial number.
   Future<void> deleteCertificateBySerialNumber(String serialNumber) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.deleteCertificateBySerialNumber$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_certificates_platform_interface.FelectronicCertificatesHostApi.deleteCertificateBySerialNumber$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[serialNumber]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[serialNumber],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: true,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 }

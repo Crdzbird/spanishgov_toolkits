@@ -3,8 +3,19 @@ import Security
 
 /// Encapsulates all Keychain operations for certificate management.
 ///
-/// Reimplemented from the Portafirmas iOS production app using modern
-/// Swift and Security.framework APIs.
+/// Uses iOS-only Security framework APIs:
+/// - `SecCertificateCopyData` for DER bytes
+/// - `SecCertificateCopySerialNumberData` (iOS 11+) for the serial number
+///
+/// This layer deliberately does **not** decode the certificate. Every field
+/// derivable from the DER encoding (issuer, subject CN, validity, key usage)
+/// is parsed once in Dart by `felectronic_x509`, so iOS and Android cannot
+/// drift apart. `SecCertificateCopyValues` is macOS-only and is not an
+/// option here; hand-rolling an ASN.1 parser per platform was the
+/// alternative, and duplicating a tested Dart parser in Swift is not worth
+/// the maintenance or the bug surface.
+///
+/// - SeeAlso: `MethodChannelFelectronicCertificates._toCertificate` (Dart).
 class KeychainCertificateManager {
 
     // MARK: - Import
@@ -18,14 +29,18 @@ class KeychainCertificateManager {
     ///   - data: The raw PKCS#12 bytes.
     ///   - password: The password protecting the .p12 file.
     ///   - alias: An optional label to assign to the imported identity.
-    /// - Throws: NSError with appropriate localized description on failure.
+    /// - Throws: ``CertificateFailure``.
     func importPKCS12(data: Data, password: String?, alias: String?) throws {
         let options: [String: Any] = [
-            kSecImportExportPassphrase as String: password ?? ""
+            kSecImportExportPassphrase as String: password ?? "",
         ]
 
         var items: CFArray?
-        let status = SecPKCS12Import(data as CFData, options as CFDictionary, &items)
+        let status = SecPKCS12Import(
+            data as CFData,
+            options as CFDictionary,
+            &items
+        )
 
         guard status == errSecSuccess,
               let importedItems = items as? [[String: Any]],
@@ -33,17 +48,9 @@ class KeychainCertificateManager {
               let identity = firstItem[kSecImportItemIdentity as String]
         else {
             if status == errSecAuthFailed || status == -25293 {
-                throw NSError(
-                    domain: "FelectronicCertificates",
-                    code: Int(status),
-                    userInfo: [NSLocalizedDescriptionKey: "IncorrectPassword"]
-                )
+                throw CertificateFailure.incorrectPassword
             }
-            throw NSError(
-                domain: "FelectronicCertificates",
-                code: Int(status),
-                userInfo: [NSLocalizedDescriptionKey: "Failed to import PKCS#12"]
-            )
+            throw CertificateFailure.importFailed(status)
         }
 
         // Remove existing identity first (Portafirmas pattern: replace silently)
@@ -56,6 +63,21 @@ class KeychainCertificateManager {
         // Store identity in Keychain
         var addQuery: [String: Any] = [
             kSecValueRef as String: identity,
+            // Private signing keys must not leave this device. The default
+            // protection class is backed up by iTunes/iCloud and restorable
+            // onto a different device; `…ThisDeviceOnly` is excluded from
+            // backups entirely. `AfterFirstUnlock` (rather than `WhenUnlocked`)
+            // keeps signing working from a background launch after a reboot.
+            //
+            // VERIFY on device: that this attribute is honoured for the
+            // *private key* when the item is added by identity reference.
+            // `SecPKCS12Import` already inserts the key into the Keychain as a
+            // side effect on iOS, so if the key keeps the protection class it
+            // was imported with, tightening it needs an explicit
+            // `SecItemUpdate` on `kSecClassKey` instead. Confirm by reading
+            // back `kSecAttrAccessible` for the key after an import.
+            kSecAttrAccessible as String:
+                kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
         ]
         addAccessGroup(to: &addQuery)
 
@@ -66,19 +88,11 @@ class KeychainCertificateManager {
         let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
 
         if addStatus == errSecDuplicateItem || addStatus == -25299 {
-            throw NSError(
-                domain: "FelectronicCertificates",
-                code: Int(addStatus),
-                userInfo: [NSLocalizedDescriptionKey: "CertificateInKeyChain"]
-            )
+            throw CertificateFailure.alreadyExists
         }
 
         guard addStatus == errSecSuccess else {
-            throw NSError(
-                domain: "FelectronicCertificates",
-                code: Int(addStatus),
-                userInfo: [NSLocalizedDescriptionKey: "Failed to store identity (\(addStatus))"]
-            )
+            throw CertificateFailure.storeFailed(addStatus)
         }
     }
 
@@ -134,86 +148,43 @@ class KeychainCertificateManager {
         return (ref as! SecIdentity, attrs)
     }
 
-    /// Extracts certificate info from a SecIdentity.
+    /// Extracts the natively-sourced certificate info from a `SecIdentity`.
+    ///
+    /// Two things come from iOS: the serial number (the Keychain's own lookup
+    /// key) and the DER bytes. Everything else is Dart's job — see the type
+    /// doc.
     func getCertificateInfo(identity: SecIdentity) -> CertificateInfo? {
         var certificate: SecCertificate?
         let status = SecIdentityCopyCertificate(identity, &certificate)
-        guard status == errSecSuccess, let cert = certificate else { return nil }
-
-        let summary = SecCertificateCopySubjectSummary(cert) as String? ?? ""
-        let derData = SecCertificateCopyData(cert) as Data
-
-        // Serial number
-        var serialError: Unmanaged<CFError>?
-        let serialData = SecCertificateCopySerialNumberData(cert, &serialError)
-        let serialHex = (serialData as Data?)?
-            .map { String(format: "%02x", $0) }
-            .joined() ?? ""
-
-        // Parse certificate fields
-        var issuerName = ""
-        var expirationDate = Date()
-        var creationDate = Date()
-        var usages: [String] = []
-
-        if let values = SecCertificateCopyValues(cert, nil, nil) as? [String: Any] {
-            // Not Valid After — try multiple keys (OID and display name)
-            expirationDate = extractDate(
-                from: values,
-                keys: [
-                    "2.16.840.1.113741.2.1.1.1.4", // Intel OID
-                    "Not Valid After",
-                ]
-            ) ?? Date()
-
-            // Not Valid Before
-            creationDate = extractDate(
-                from: values,
-                keys: [
-                    "2.16.840.1.113741.2.1.1.1.3",
-                    "Not Valid Before",
-                ]
-            ) ?? Date()
-
-            // Issuer Name — extract CN from structured issuer data
-            issuerName = extractIssuerCN(from: values)
-
-            // Key Usage (OID 2.5.29.15)
-            usages = extractKeyUsages(from: values)
-        }
-
-        // Extract public key DER for server-side validation
-        var publicKeyData: Data?
-        if let trust = createTrust(for: cert) {
-            if let pubKey = SecTrustCopyKey(trust) {
-                var pubKeyError: Unmanaged<CFError>?
-                if let keyData = SecKeyCopyExternalRepresentation(pubKey, &pubKeyError) {
-                    publicKeyData = keyData as Data
-                }
-            }
+        guard status == errSecSuccess, let cert = certificate else {
+            return nil
         }
 
         return CertificateInfo(
-            serialNumber: serialHex,
-            alias: nil,
-            holderName: summary,
-            issuerName: issuerName,
-            expirationDate: expirationDate,
-            creationDate: creationDate,
-            usages: Array(Set(usages)),
-            encoded: derData,
-            publicKeyData: publicKeyData
+            serialNumber: copySerialHex(from: cert),
+            encoded: SecCertificateCopyData(cert) as Data
         )
     }
 
     // MARK: - Delete
 
     /// Deletes an identity from the Keychain by serial number.
+    ///
+    /// Deletes **only** the matching identity and its certificate. Other
+    /// certificates in the access group are left untouched.
     func deleteIdentity(serialNumber: String) throws {
+        // Canonicalise the incoming serial: it may have been persisted by an
+        // earlier version in a platform-specific spelling.
+        let wanted = Self.canonicalSerial(serialNumber)
         let identities = getAllIdentities()
         for (identity, _) in identities {
             if let info = getCertificateInfo(identity: identity),
-               info.serialNumber == serialNumber {
+               info.serialNumber == wanted {
+
+                // Resolve the certificate *before* removing the identity, so
+                // the follow-up delete is scoped to this exact item.
+                var certificate: SecCertificate?
+                SecIdentityCopyCertificate(identity, &certificate)
 
                 var deleteQuery: [String: Any] = [
                     kSecClass as String: kSecClassIdentity,
@@ -223,67 +194,67 @@ class KeychainCertificateManager {
 
                 let status = SecItemDelete(deleteQuery as CFDictionary)
                 guard status == errSecSuccess else {
-                    throw NSError(
-                        domain: "FelectronicCertificates",
-                        code: Int(status),
-                        userInfo: [NSLocalizedDescriptionKey: "Failed to delete identity"]
-                    )
+                    throw CertificateFailure.deleteFailed(status)
                 }
 
-                // Also delete the associated certificate
-                var certDeleteQuery: [String: Any] = [
-                    kSecClass as String: kSecClassCertificate,
-                    kSecMatchLimit as String: kSecMatchLimitAll,
-                    kSecReturnRef as String: true,
-                ]
-                addAccessGroup(to: &certDeleteQuery)
-                // Best-effort certificate cleanup
-                SecItemDelete(certDeleteQuery as CFDictionary)
+                // Remove the certificate if deleting the identity left it
+                // behind. Scoped by `kSecValueRef` to this certificate alone.
+                //
+                // This previously queried `{ kSecClass: kSecClassCertificate }`
+                // with no predicate, which matches every certificate in the
+                // access group — deleting one certificate wiped them all.
+                //
+                // VERIFY: on-device, whether deleting the identity already
+                // removes the certificate and private key. If it does, this
+                // block is redundant and `errSecItemNotFound` is the expected
+                // (and harmless) status here.
+                if let cert = certificate {
+                    var certDeleteQuery: [String: Any] = [
+                        kSecClass as String: kSecClassCertificate,
+                        kSecValueRef as String: cert,
+                    ]
+                    addAccessGroup(to: &certDeleteQuery)
+                    SecItemDelete(certDeleteQuery as CFDictionary)
+                }
 
                 return
             }
         }
-        throw NSError(
-            domain: "FelectronicCertificates",
-            code: -1,
-            userInfo: [NSLocalizedDescriptionKey: "CertificateNotFound"]
-        )
+        throw CertificateFailure.notFound
     }
 
     // MARK: - Sign
 
     /// Signs data using the private key of the given identity.
+    ///
+    /// Takes a resolved `SecKeyAlgorithm` rather than a name: the mapping
+    /// from the wire enum lives in the plugin, where it is exhaustive over
+    /// `CertSignAlgorithmMessage`. This type previously mapped from a string
+    /// and silently defaulted to SHA-256/RSA for anything unrecognised, which
+    /// meant a bad value signed with RSA parameters against an EC key.
     func sign(
         data: Data,
-        algorithm: String,
+        algorithm: SecKeyAlgorithm,
         identity: SecIdentity
     ) throws -> Data {
         var privateKey: SecKey?
         let status = SecIdentityCopyPrivateKey(identity, &privateKey)
         guard status == errSecSuccess, let key = privateKey else {
-            throw NSError(
-                domain: "FelectronicCertificates",
-                code: Int(status),
-                userInfo: [NSLocalizedDescriptionKey: "SigningError"]
+            throw CertificateFailure.signingFailed(
+                reason: "Private key unavailable (OSStatus \(status))"
             )
         }
-
-        let secAlgorithm = mapAlgorithm(algorithm)
 
         var signError: Unmanaged<CFError>?
         guard let signature = SecKeyCreateSignature(
             key,
-            secAlgorithm,
+            algorithm,
             data as CFData,
             &signError
         ) else {
-            let errorDesc = signError?.takeRetainedValue().localizedDescription
+            let reason = signError?.takeRetainedValue().localizedDescription
                 ?? "Signing failed"
-            throw NSError(
-                domain: "FelectronicCertificates",
-                code: -1,
-                userInfo: [NSLocalizedDescriptionKey: errorDesc]
-            )
+            throw CertificateFailure.signingFailed(reason: reason)
         }
 
         return signature as Data
@@ -294,7 +265,10 @@ class KeychainCertificateManager {
     /// Validates the trust chain for a certificate.
     func validateTrust(for identity: SecIdentity) -> Bool {
         var certificate: SecCertificate?
-        guard SecIdentityCopyCertificate(identity, &certificate) == errSecSuccess,
+        guard SecIdentityCopyCertificate(
+            identity,
+            &certificate
+        ) == errSecSuccess,
               let cert = certificate,
               let trust = createTrust(for: cert)
         else {
@@ -318,83 +292,43 @@ class KeychainCertificateManager {
         return status == errSecSuccess ? trust : nil
     }
 
-    private func extractDate(
-        from values: [String: Any],
-        keys: [String]
-    ) -> Date? {
-        for key in keys {
-            if let entry = values[key] as? [String: Any],
-               let dateValue = entry[kSecPropertyKeyValue as String] as? Date {
-                return dateValue
-            }
+    /// Copies the certificate serial number in canonical form.
+    ///
+    /// `SecCertificateCopySerialNumberData` (iOS 11+) returns the DER INTEGER
+    /// content octets, which keep the sign-padding byte for values whose top
+    /// bit is set (`0xB5A1C3` arrives as `00 b5 a1 c3`). Canonicalising strips
+    /// that pad so the result matches Android and Dart for the same
+    /// certificate.
+    ///
+    /// - SeeAlso: `CertificateSerial.canonical` (Dart) — the definition this
+    ///   must agree with.
+    private func copySerialHex(from cert: SecCertificate) -> String {
+        var serialError: Unmanaged<CFError>?
+        guard let serialData = SecCertificateCopySerialNumberData(
+            cert,
+            &serialError
+        ) as Data? else {
+            return ""
         }
-        return nil
+        let hex = serialData.map { String(format: "%02x", $0) }.joined()
+        return Self.canonicalSerial(hex)
     }
 
-    private func extractIssuerCN(from values: [String: Any]) -> String {
-        // Try structured "Issuer Name" key
-        if let issuer = values["Issuer Name"] as? [String: Any],
-           let issuerFields = issuer[kSecPropertyKeyValue as String] as? [[String: Any]] {
-            for field in issuerFields {
-                if let label = field[kSecPropertyKeyLabel as String] as? String,
-                   label == "2.5.4.3",
-                   let value = field[kSecPropertyKeyValue as String] as? String {
-                    return value
-                }
-            }
+    /// Normalises a serial to lowercase hex with no sign pad and no leading
+    /// zeros. `"0"` for an all-zero serial, `""` for empty input.
+    ///
+    /// Must stay behaviourally identical to `CertificateSerial.canonical`.
+    static func canonicalSerial(_ serial: String) -> String {
+        if serial.isEmpty { return "" }
+
+        var hex = serial.lowercased().filter {
+            $0 != " " && $0 != "\t" && $0 != ":" && $0 != "_" && $0 != "-"
         }
+        if hex.hasPrefix("0x") { hex.removeFirst(2) }
+        if hex.isEmpty { return "" }
 
-        // Try OID-based issuer CN
-        if let issuerCN = values["2.5.4.3"] as? [String: Any],
-           let value = issuerCN["value"] as? String {
-            return value
-        }
-
-        return ""
-    }
-
-    private func extractKeyUsages(from values: [String: Any]) -> [String] {
-        var usages: [String] = []
-
-        if let keyUsage = values["2.5.29.15"] as? [String: Any],
-           let usageValue = keyUsage[kSecPropertyKeyValue as String] {
-            if let usageNumber = usageValue as? Int {
-                // Bit 0 (0x80): digitalSignature → AUTHENTICATION
-                if usageNumber & 0x80 != 0 { usages.append("AUTHENTICATION") }
-                // Bit 1 (0x40): nonRepudiation → SIGNING
-                if usageNumber & 0x40 != 0 { usages.append("SIGNING") }
-                // Bit 2 (0x20): keyEncipherment → ENCRYPTION
-                if usageNumber & 0x20 != 0 { usages.append("ENCRYPTION") }
-                // Bit 3 (0x10): dataEncipherment → ENCRYPTION
-                if usageNumber & 0x10 != 0 { usages.append("ENCRYPTION") }
-            }
-        }
-
-        // If no key usage extension found, assume signing + authentication
-        if usages.isEmpty {
-            usages = ["SIGNING", "AUTHENTICATION"]
-        }
-
-        return usages
-    }
-
-    private func mapAlgorithm(_ algorithm: String) -> SecKeyAlgorithm {
-        switch algorithm.uppercased() {
-        case "SHA256RSA":
-            return .rsaSignatureMessagePKCS1v15SHA256
-        case "SHA384RSA":
-            return .rsaSignatureMessagePKCS1v15SHA384
-        case "SHA512RSA":
-            return .rsaSignatureMessagePKCS1v15SHA512
-        case "SHA256EC":
-            return .ecdsaSignatureMessageX962SHA256
-        case "SHA384EC":
-            return .ecdsaSignatureMessageX962SHA384
-        case "SHA512EC":
-            return .ecdsaSignatureMessageX962SHA512
-        default:
-            return .rsaSignatureMessagePKCS1v15SHA256
-        }
+        let stripped = hex.drop(while: { $0 == "0" })
+        return stripped.isEmpty ? "0" : String(stripped)
     }
 
     /// Adds the Keychain access group for multi-app scenarios.
@@ -434,15 +368,22 @@ class KeychainCertificateManager {
     }
 }
 
-/// Lightweight struct for passing certificate info within Swift.
+/// The certificate facts that only iOS can supply.
+///
+/// Anything derivable from `encoded` is intentionally absent: it is decoded
+/// once in Dart by `felectronic_x509` so both platforms agree by construction.
 struct CertificateInfo {
+    /// Lowercase hex of the DER INTEGER content octets, per
+    /// `SecCertificateCopySerialNumberData`.
+    ///
+    /// - Warning: This is the Keychain lookup key. Dart must round-trip it
+    ///   verbatim — do not normalize, re-case, or strip the DER sign pad, or
+    ///   `deleteIdentity(serialNumber:)` will stop matching. Note this
+    ///   encoding differs from Android's `BigInteger.toString(16)`, which
+    ///   drops the leading zero pad.
     let serialNumber: String
-    let alias: String?
-    let holderName: String
-    let issuerName: String
-    let expirationDate: Date
-    let creationDate: Date
-    let usages: [String]
+
+    /// DER-encoded certificate: the single source of truth for issuer,
+    /// validity and key usage.
     let encoded: Data
-    let publicKeyData: Data?
 }

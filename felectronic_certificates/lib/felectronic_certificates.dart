@@ -57,8 +57,7 @@ Future<void> setDefaultCertificateBySerialNumber(String serialNumber) =>
     _platform.setDefaultCertificateBySerialNumber(serialNumber);
 
 /// Clears the default certificate selection.
-Future<void> clearDefaultCertificate() =>
-    _platform.clearDefaultCertificate();
+Future<void> clearDefaultCertificate() => _platform.clearDefaultCertificate();
 
 /// Signs [data] using the default certificate's private key.
 ///
@@ -69,8 +68,7 @@ Future<void> clearDefaultCertificate() =>
 Future<Uint8List> signWithDefaultCertificate(
   Uint8List data, {
   CertSignAlgorithm algorithm = CertSignAlgorithm.sha256rsa,
-}) =>
-    _platform.signWithDefaultCertificate(data, algorithm: algorithm);
+}) => _platform.signWithDefaultCertificate(data, algorithm: algorithm);
 
 /// Imports a PKCS#12 (.p12/.pfx) file into the device keystore.
 ///
@@ -82,14 +80,12 @@ Future<void> importCertificate(
   Uint8List pkcs12Data, {
   String? password,
   String? alias,
-}) =>
-    _platform.importCertificate(pkcs12Data, password: password, alias: alias);
+}) => _platform.importCertificate(pkcs12Data, password: password, alias: alias);
 
 /// Deletes the currently selected default certificate.
 ///
 /// Throws a [CertificateError] subclass on failure.
-Future<void> deleteDefaultCertificate() =>
-    _platform.deleteDefaultCertificate();
+Future<void> deleteDefaultCertificate() => _platform.deleteDefaultCertificate();
 
 /// Deletes a certificate identified by its [serialNumber].
 ///

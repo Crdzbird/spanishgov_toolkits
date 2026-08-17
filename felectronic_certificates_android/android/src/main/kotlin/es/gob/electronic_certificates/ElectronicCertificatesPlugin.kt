@@ -17,8 +17,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.security.Signature
 import java.security.cert.X509Certificate
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 class ElectronicCertificatesPlugin :
     FlutterPlugin,
@@ -38,8 +36,42 @@ class ElectronicCertificatesPlugin :
         private const val PREFS_NAME = "felectronic_certificates"
         private const val KEY_DEFAULT_ALIAS = "default_alias"
         private const val KEY_KNOWN_ALIASES = "known_aliases"
-        private val dateFormat =
-            SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
+
+        /**
+         * Normalises a serial to lowercase hex with no DER sign-padding byte
+         * and no leading zeros. Returns `"0"` for an all-zero serial and
+         * `""` for empty input.
+         *
+         * Must stay behaviourally identical to `CertificateSerial.canonical`
+         * (Dart) and `KeychainCertificateManager.canonicalSerial` (Swift) —
+         * the serial is the keystore lookup key and all three have to agree.
+         */
+        fun canonicalSerial(serial: String): String {
+            if (serial.isEmpty()) return ""
+
+            var hex = serial.lowercase()
+                .filterNot { it == ' ' || it == '\t' || it == ':' ||
+                    it == '_' || it == '-' }
+            if (hex.startsWith("0x")) hex = hex.substring(2)
+            if (hex.isEmpty()) return ""
+
+            val stripped = hex.trimStart('0')
+            return if (stripped.isEmpty()) "0" else stripped
+        }
+
+        /**
+         * Canonical serial for [cert].
+         *
+         * Uses `BigInteger.toByteArray()` rather than `toString(16)` so the
+         * bytes match the DER INTEGER content octets iOS reports, then
+         * canonicalises. `toString(16)` would emit a leading `-` for a serial
+         * mis-encoded as negative, which is not a valid lookup key.
+         */
+        fun canonicalSerialOf(cert: X509Certificate): String =
+            canonicalSerial(
+                cert.serialNumber.toByteArray()
+                    .joinToString("") { "%02x".format(it) },
+            )
     }
 
     // ── SharedPreferences helpers ─────────────────────────────────────
@@ -196,8 +228,7 @@ class ElectronicCertificatesPlugin :
             try {
                 val aarCert = certificateSigner?.getDefaultCertificate()
                 if (aarCert != null) {
-                    val aarSerial = aarCert.certificate.serialNumber
-                        .toString(16)
+                    val aarSerial = canonicalSerialOf(aarCert.certificate)
                     val alreadyListed = messages
                         .filterNotNull()
                         .any { it.serialNumber == aarSerial }
@@ -290,13 +321,16 @@ class ElectronicCertificatesPlugin :
             return
         }
 
-        // Find the alias that matches this serial number
+        // Find the alias that matches this serial number. The incoming serial
+        // is canonicalised because it may have been persisted by an earlier
+        // version in a platform-specific spelling.
+        val wanted = canonicalSerial(serialNumber)
         scope.launch {
             withContext(Dispatchers.IO) {
                 for (alias in getKnownAliases()) {
                     try {
                         val msg = buildMessageForAlias(ctx, alias)
-                        if (msg?.serialNumber == serialNumber) {
+                        if (msg?.serialNumber == wanted) {
                             setDefaultAlias(alias)
                             withContext(Dispatchers.Main) {
                                 callback(Result.success(Unit))
@@ -328,7 +362,7 @@ class ElectronicCertificatesPlugin :
 
     override fun signWithDefaultCertificate(
         data: ByteArray,
-        algorithm: String,
+        algorithm: CertSignAlgorithmMessage,
         callback: (Result<ByteArray>) -> Unit,
     ) {
         // Try AAR first (uses its own default selection)
@@ -339,7 +373,9 @@ class ElectronicCertificatesPlugin :
                 if (aarCert != null) {
                     signer.signWithDefaultCertificate(
                         data,
-                        algorithm,
+                        // The AAR takes the legacy string form; the enum
+                        // constant names match it exactly (SHA256RSA, ...).
+                        algorithm.name,
                         { signedBytes ->
                             scope.launch {
                                 callback(Result.success(signedBytes))
@@ -465,11 +501,12 @@ class ElectronicCertificatesPlugin :
 
         scope.launch {
             withContext(Dispatchers.IO) {
-                // Find the alias matching this serial
+                // Find the alias matching this serial (canonical comparison).
+                val wanted = canonicalSerial(serialNumber)
                 for (alias in getKnownAliases()) {
                     try {
                         val msg = buildMessageForAlias(ctx, alias)
-                        if (msg?.serialNumber == serialNumber) {
+                        if (msg?.serialNumber == wanted) {
                             removeKnownAlias(alias)
                             if (getDefaultAlias() == alias) {
                                 setDefaultAlias(null)
@@ -500,32 +537,15 @@ class ElectronicCertificatesPlugin :
         val chain = KeyChain.getCertificateChain(ctx, alias) ?: return null
         val cert = chain.firstOrNull() as? X509Certificate ?: return null
 
-        val subjectDN = cert.subjectX500Principal.name
-        val issuerDN = cert.issuerX500Principal.name
-        val holderName = parseDNField(subjectDN, "CN")
-        val issuerName = parseDNField(issuerDN, "CN")
-        val serialHex = cert.serialNumber.toString(16)
-        val expDate = dateFormat.format(cert.notAfter)
-
-        val usages = mutableListOf<String>()
-        cert.keyUsage?.let { ku ->
-            if (ku.size > 0 && ku[0]) usages.add("AUTHENTICATION")
-            if (ku.size > 1 && ku[1]) usages.add("SIGNING")
-            if (ku.size > 2 && ku[2]) usages.add("ENCRYPTION")
-            if (ku.size > 3 && ku[3]) usages.add("ENCRYPTION")
-        }
-        if (usages.isEmpty()) {
-            usages.add("SIGNING")
-            usages.add("AUTHENTICATION")
-        }
-
+        // Subject CN, issuer CN, validity and key usage are intentionally not
+        // computed here: Dart decodes them from `encoded` via
+        // felectronic_x509, so Android and iOS cannot disagree. The previous
+        // key-usage block also invented "SIGNING;AUTHENTICATION" whenever the
+        // extension was absent, asserting capabilities the certificate never
+        // claimed.
         return DeviceCertificateMessage(
-            serialNumber = serialHex,
+            serialNumber = canonicalSerialOf(cert),
             alias = alias,
-            holderName = holderName,
-            issuerName = issuerName,
-            expirationDate = expDate,
-            usages = usages.distinct().joinToString(";"),
             encoded = cert.encoded,
         )
     }
@@ -534,41 +554,30 @@ class ElectronicCertificatesPlugin :
     private fun mapAarToMessage(
         info: PFCertificateInfo,
     ): DeviceCertificateMessage {
-        val serialHex = info.certificate.serialNumber.toString(16)
-        val usages = info.usage
-            .map { it.name }
-            .distinct()
-            .joinToString(";")
-        val expDate = dateFormat.format(info.expirationDate)
-
         return DeviceCertificateMessage(
-            serialNumber = serialHex,
+            serialNumber = canonicalSerialOf(info.certificate),
             alias = info.alias,
-            holderName = info.ownerCommonName,
-            issuerName = info.issuerCommonName,
-            expirationDate = expDate,
-            usages = usages,
             encoded = info.certificate.encoded,
         )
     }
 
-    private fun parseDNField(dn: String, field: String): String {
-        val quoted = Regex("""$field="([^"]+)"""", RegexOption.IGNORE_CASE)
-        quoted.find(dn)?.groupValues?.getOrNull(1)?.trim()
-            ?.let { return it }
-        val simple = Regex("""$field=([^,+]+)""", RegexOption.IGNORE_CASE)
-        return simple.find(dn)?.groupValues?.getOrNull(1)?.trim() ?: ""
-    }
-
-    private fun mapAlgorithm(algorithm: String): String =
-        when (algorithm.uppercase()) {
-            "SHA256RSA" -> "SHA256withRSA"
-            "SHA384RSA" -> "SHA384withRSA"
-            "SHA512RSA" -> "SHA512withRSA"
-            "SHA256EC" -> "SHA256withECDSA"
-            "SHA384EC" -> "SHA384withECDSA"
-            "SHA512EC" -> "SHA512withECDSA"
-            else -> "SHA256withRSA"
+    /**
+     * Maps the wire enum to a JCA `Signature` algorithm name.
+     *
+     * Exhaustive over [CertSignAlgorithmMessage] with no `else` branch, so
+     * adding a case to the Pigeon schema is a compile error here rather than
+     * a silent fall-through to SHA256withRSA — which previously meant a
+     * misspelled algorithm signed with RSA parameters against an EC key and
+     * failed with an opaque provider error.
+     */
+    private fun mapAlgorithm(algorithm: CertSignAlgorithmMessage): String =
+        when (algorithm) {
+            CertSignAlgorithmMessage.SHA256RSA -> "SHA256withRSA"
+            CertSignAlgorithmMessage.SHA384RSA -> "SHA384withRSA"
+            CertSignAlgorithmMessage.SHA512RSA -> "SHA512withRSA"
+            CertSignAlgorithmMessage.SHA256EC -> "SHA256withECDSA"
+            CertSignAlgorithmMessage.SHA384EC -> "SHA384withECDSA"
+            CertSignAlgorithmMessage.SHA512EC -> "SHA512withECDSA"
         }
 
     private fun noActivityError() = FlutterError(

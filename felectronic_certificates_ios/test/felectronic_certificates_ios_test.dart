@@ -28,10 +28,6 @@ void main() {
       mockApi.allCertificatesResult = [
         DeviceCertificateMessage(
           serialNumber: 'abc123',
-          holderName: 'GARCIA, JUAN',
-          issuerName: 'FNMT',
-          expirationDate: '31-12-2030',
-          usages: 'SIGNING;AUTHENTICATION',
           encoded: Uint8List.fromList([1, 2, 3]),
         ),
       ];
@@ -39,21 +35,12 @@ void main() {
       final result = await platform.getAllCertificates();
       expect(result, hasLength(1));
       expect(result.first.serialNumber, 'abc123');
-      expect(result.first.expirationDate, DateTime(2030, 12, 31));
-      expect(
-        result.first.usages,
-        [CertKeyUsage.signing, CertKeyUsage.authentication],
-      );
     });
 
     test('getDefaultCertificate returns certificate', () async {
       mockApi.defaultCertificateResult = DeviceCertificateMessage(
         serialNumber: 'def456',
         alias: 'Work Cert',
-        holderName: 'LOPEZ, MARIA',
-        issuerName: 'FNMT',
-        expirationDate: '15-06-2028',
-        usages: 'AUTHENTICATION',
         encoded: Uint8List.fromList([4, 5, 6]),
       );
 
@@ -70,16 +57,11 @@ void main() {
     test('selectDefaultCertificate returns certificate', () async {
       mockApi.selectCertificateResult = DeviceCertificateMessage(
         serialNumber: 'ghi789',
-        holderName: 'PEREZ, CARLOS',
-        issuerName: 'FNMT',
-        expirationDate: '01-01-2029',
-        usages: 'ENCRYPTION',
         encoded: Uint8List.fromList([7, 8, 9]),
       );
 
       final result = await platform.selectDefaultCertificate();
       expect(result, isNotNull);
-      expect(result!.usages, [CertKeyUsage.encryption]);
     });
 
     test('setDefaultCertificateBySerialNumber passes serial', () async {
@@ -99,7 +81,10 @@ void main() {
         Uint8List.fromList([42]),
       );
       expect(result, Uint8List.fromList([10, 20, 30]));
-      expect(mockApi.lastSignAlgorithm, 'SHA256RSA');
+      expect(
+        mockApi.lastSignAlgorithm,
+        CertSignAlgorithmMessage.sha256rsa,
+      );
     });
 
     test('signWithDefaultCertificate passes SHA256EC', () async {
@@ -109,7 +94,10 @@ void main() {
         Uint8List.fromList([42]),
         algorithm: CertSignAlgorithm.sha256ec,
       );
-      expect(mockApi.lastSignAlgorithm, 'SHA256EC');
+      expect(
+        mockApi.lastSignAlgorithm,
+        CertSignAlgorithmMessage.sha256ec,
+      );
     });
 
     test('importCertificate passes data', () async {
@@ -168,7 +156,7 @@ class _MockHostApi implements FelectronicCertificatesHostApi {
 
   String? lastSetSerial;
   bool clearDefaultCalled = false;
-  String? lastSignAlgorithm;
+  CertSignAlgorithmMessage? lastSignAlgorithm;
   String? lastImportPassword;
   String? lastImportAlias;
   bool deleteDefaultCalled = false;
@@ -209,7 +197,7 @@ class _MockHostApi implements FelectronicCertificatesHostApi {
   @override
   Future<Uint8List> signWithDefaultCertificate(
     Uint8List data,
-    String algorithm,
+    CertSignAlgorithmMessage algorithm,
   ) async {
     lastSignAlgorithm = algorithm;
     if (signError != null) throw signError!;

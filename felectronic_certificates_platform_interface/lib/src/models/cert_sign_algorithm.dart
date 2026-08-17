@@ -1,3 +1,5 @@
+import 'package:felectronic_certificates_platform_interface/src/generated/messages.g.dart';
+
 /// {@template cert_sign_algorithm}
 /// Signing algorithms supported for certificate-based signatures.
 /// {@endtemplate}
@@ -22,6 +24,24 @@ enum CertSignAlgorithm {
 
   const CertSignAlgorithm(this.value);
 
-  /// The string value sent to the native platform.
+  /// The legacy string spelling of this algorithm.
+  ///
+  /// No longer used to cross the platform boundary — that is now a typed
+  /// enum. Retained because the Android AAR's signing API still takes this
+  /// form, and it is useful for logging.
   final String value;
+
+  /// The wire representation sent to the native platform.
+  ///
+  /// Exhaustive with no default branch, so adding a case here without adding
+  /// one to the Pigeon schema is a compile error rather than a silent
+  /// fallback to SHA-256/RSA.
+  CertSignAlgorithmMessage get wire => switch (this) {
+    CertSignAlgorithm.sha256rsa => CertSignAlgorithmMessage.sha256rsa,
+    CertSignAlgorithm.sha384rsa => CertSignAlgorithmMessage.sha384rsa,
+    CertSignAlgorithm.sha512rsa => CertSignAlgorithmMessage.sha512rsa,
+    CertSignAlgorithm.sha256ec => CertSignAlgorithmMessage.sha256ec,
+    CertSignAlgorithm.sha384ec => CertSignAlgorithmMessage.sha384ec,
+    CertSignAlgorithm.sha512ec => CertSignAlgorithmMessage.sha512ec,
+  };
 }

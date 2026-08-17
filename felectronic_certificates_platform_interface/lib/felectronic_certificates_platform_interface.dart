@@ -14,6 +14,7 @@ export 'src/models/cert_key_usage.dart';
 export 'src/models/cert_sign_algorithm.dart';
 export 'src/models/device_certificate.dart';
 export 'src/utils/certificate_extensions.dart';
+export 'src/utils/certificate_serial.dart';
 
 /// {@template felectronic_certificates_platform}
 /// The interface that implementations of felectronic_certificates must

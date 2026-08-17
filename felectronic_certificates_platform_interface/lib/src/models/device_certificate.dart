@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
+import 'package:felectronic_certificates_platform_interface/src/generated/messages.g.dart';
 import 'package:felectronic_certificates_platform_interface/src/models/cert_key_usage.dart';
+import 'package:felectronic_x509/felectronic_x509.dart';
 import 'package:flutter/foundation.dart' show immutable;
 
 /// {@template device_certificate}
@@ -19,6 +21,44 @@ class DeviceCertificate {
     this.alias,
   });
 
+  /// Builds a certificate from a platform message.
+  ///
+  /// The message carries only what the keystore alone knows — the serial and
+  /// the alias. Subject CN, issuer CN, validity and key usage are decoded
+  /// here from [DeviceCertificateMessage.encoded] with `felectronic_x509`.
+  ///
+  /// This is the single implementation of that conversion. Both federated
+  /// implementations and the default method-channel platform call it, so
+  /// Android and iOS cannot report different values for the same
+  /// certificate.
+  ///
+  /// A certificate whose DER will not decode yields empty names, no usages
+  /// and a `null` [expirationDate] rather than plausible-looking
+  /// substitutes, and never throws — one unreadable certificate must not
+  /// fail a whole listing.
+  factory DeviceCertificate.fromMessage(DeviceCertificateMessage message) {
+    X509Certificate? parsed;
+    if (message.encoded.isNotEmpty) {
+      try {
+        parsed = X509Parser.fromDer(message.encoded);
+      } on FormatException {
+        parsed = null;
+      }
+    }
+
+    return DeviceCertificate(
+      serialNumber: message.serialNumber,
+      alias: message.alias,
+      holderName: parsed?.subject.commonName ?? '',
+      issuerName: parsed?.issuer.commonName ?? '',
+      expirationDate: parsed?.notValidAfter,
+      usages: parsed == null
+          ? const []
+          : CertKeyUsage.fromX509Flags(parsed.keyUsage),
+      encoded: message.encoded,
+    );
+  }
+
   /// Certificate serial number (hex string).
   final String serialNumber;
 
@@ -31,8 +71,12 @@ class DeviceCertificate {
   /// Issuer common name.
   final String issuerName;
 
-  /// Certificate expiration date.
-  final DateTime expirationDate;
+  /// Certificate expiration date (`notAfter`), as a UTC instant.
+  ///
+  /// `null` when the certificate could not be decoded, which is genuinely
+  /// different from "expired". Earlier versions substituted the epoch here,
+  /// so an undecodable certificate silently reported itself as long expired.
+  final DateTime? expirationDate;
 
   /// Key usage flags for this certificate.
   final List<CertKeyUsage> usages;
