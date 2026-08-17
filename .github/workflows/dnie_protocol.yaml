@@ -1,0 +1,39 @@
+name: dnie_protocol
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/dnie_protocol.yaml"
+      - "felectronic_dnie_ios/ios/DnieProtocol/**"
+  push:
+    branches:
+      - master
+    paths:
+      - ".github/workflows/dnie_protocol.yaml"
+      - "felectronic_dnie_ios/ios/DnieProtocol/**"
+
+jobs:
+  test:
+    # Stage 1 of the Swift rewrite is pure data transformation — no CoreNFC, no
+    # card, no simulator — so it tests as a plain Swift package in seconds.
+    runs-on: macos-latest
+
+    defaults:
+      run:
+        working-directory: felectronic_dnie_ios/ios/DnieProtocol
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run tests
+        run: swift test
+
+      - name: Verify it also compiles for iOS
+        run: |
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          swiftc -typecheck -target arm64-apple-ios15.0 -sdk "$SDK" \
+            Sources/DnieProtocol/*.swift
