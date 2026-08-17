@@ -9,28 +9,25 @@ on:
     branches:
       - master
     paths:
-      - "felectronic_dnie/pubspec.yaml"
-      - "felectronic_dnie_platform_interface/pubspec.yaml"
+      - "pubspec.yaml"
+      - "*/pubspec.yaml"
       - ".github/workflows/license_check.yaml"
   push:
     branches:
       - master
     paths:
-      - "felectronic_dnie/pubspec.yaml"
-      - "felectronic_dnie_platform_interface/pubspec.yaml"
+      - "pubspec.yaml"
+      - "*/pubspec.yaml"
       - ".github/workflows/license_check.yaml"
 
 jobs:
   license_check:
+    # A pub workspace resolves to a single pubspec.lock at the repository
+    # root, so the per-package checks this workflow used to run failed with
+    # "Could not find a pubspec.lock". Checking the root covers every
+    # workspace member in one pass.
     uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/license_check.yml@v1
     with:
       flutter_version: 3.47.0
+      working_directory: .
       allowed: "MIT,BSD-3-Clause,BSD-2-Clause,Apache-2.0"
-      working_directory: felectronic_dnie
-
-  license_check_platform_interface:
-    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/license_check.yml@v1
-    with:
-      flutter_version: 3.47.0
-      allowed: "MIT,BSD-3-Clause,BSD-2-Clause,Apache-2.0"
-      working_directory: felectronic_dnie_platform_interface
