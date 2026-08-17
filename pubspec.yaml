@@ -30,6 +30,7 @@ workspace:
   - felectronic_dnie_android
   - felectronic_dnie_ios
   - felectronic_dnie_platform_interface
+  - felectronic_triphase
   - felectronic_x509
   - felectronic_dnie/example
 

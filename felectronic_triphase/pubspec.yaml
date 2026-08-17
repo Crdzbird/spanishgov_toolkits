@@ -1,0 +1,25 @@
+name: felectronic_triphase
+description: >-
+  The @firma three-phase signing protocol in pure Dart. Produces CAdES, PAdES
+  and XAdES signatures by delegating envelope construction to the government
+  service while the private key stays on the device.
+version: 1.0.0
+repository: https://github.com/Crdzbird/spanishgov_toolkits
+issue_tracker: https://github.com/Crdzbird/spanishgov_toolkits/issues
+topics:
+  - signing
+  - cades
+  - pades
+  - xades
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  xml: ^6.5.0
+
+dev_dependencies:
+  test: ^1.25.0
+  very_good_analysis: ^10.2.0
