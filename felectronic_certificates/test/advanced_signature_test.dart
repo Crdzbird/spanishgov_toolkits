@@ -54,8 +54,10 @@ void main() {
 
     /// An EC certificate signed with RSA parameters verifies against nothing.
     test('key type survives the mapping', () {
-      expect(CertSignAlgorithm.sha256rsa.triphaseAlgorithm.isEllipticCurve,
-          isFalse);
+      expect(
+        CertSignAlgorithm.sha256rsa.triphaseAlgorithm.isEllipticCurve,
+        isFalse,
+      );
       expect(
         CertSignAlgorithm.sha256ec.triphaseAlgorithm.isEllipticCurve,
         isTrue,
@@ -104,8 +106,9 @@ void main() {
 
     test('a format runs the exchange', () async {
       final bodies = <String>[];
-      final envelope =
-          base64Url.encode(utf8.encode('top-level')).replaceAll('=', '');
+      final envelope = base64Url
+          .encode(utf8.encode('top-level'))
+          .replaceAll('=', '');
       Future<TriphaseResponse> transport(TriphaseRequest request) async {
         bodies.add(request.body);
         final payload = base64.encode(utf8.encode('p'));
@@ -189,8 +192,9 @@ void main() {
     test('a format runs the three-phase exchange', () async {
       final bodies = <String>[];
       var call = 0;
-      final envelope =
-          base64Url.encode(utf8.encode('envelope')).replaceAll('=', '');
+      final envelope = base64Url
+          .encode(utf8.encode('envelope'))
+          .replaceAll('=', '');
       Future<TriphaseResponse> transport(TriphaseRequest request) async {
         bodies.add(request.body);
         call++;
@@ -225,7 +229,7 @@ void main() {
         final body = bodies.length == 1
             ? '<xml><firma><param n="PRE">$payload</param></firma></xml>'
             : 'OK NEWID='
-                '${base64Url.encode(utf8.encode('e')).replaceAll('=', '')}';
+                  '${base64Url.encode(utf8.encode('e')).replaceAll('=', '')}';
         return TriphaseResponse(
           statusCode: 200,
           body: base64Url.encode(utf8.encode(body)).replaceAll('=', ''),
@@ -248,7 +252,7 @@ void main() {
         final body = platform.signedPayloads.isEmpty
             ? '<xml><firma><param n="PRE">$payload</param></firma></xml>'
             : 'OK NEWID='
-                '${base64Url.encode(utf8.encode('e')).replaceAll('=', '')}';
+                  '${base64Url.encode(utf8.encode('e')).replaceAll('=', '')}';
         return TriphaseResponse(
           statusCode: 200,
           body: base64Url.encode(utf8.encode(body)).replaceAll('=', ''),

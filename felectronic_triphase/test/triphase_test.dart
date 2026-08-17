@@ -32,7 +32,7 @@ void main() {
       base64Url.encode(utf8.encode(text)).replaceAll('=', '');
 
   final document = Uint8List.fromList(utf8.encode('the document to sign'));
-  const certificate = 'Q2VydA';  // base64url of 'Cert'
+  const certificate = 'Q2VydA'; // base64url of 'Cert'
 
   group('codec', () {
     test('decodes base64url without padding', () {
@@ -196,8 +196,7 @@ void main() {
       return (transport: transport, bodies: bodies);
     }
 
-    test('runs all three phases and returns the assembled signature',
-        () async {
+    test('runs all three phases and returns the assembled signature', () async {
       final payload = utf8.encode('what the service wants signed');
       final expected = utf8.encode('the finished envelope');
       final fake = fakeService(
