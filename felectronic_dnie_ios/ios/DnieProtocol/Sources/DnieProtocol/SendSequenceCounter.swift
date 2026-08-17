@@ -90,6 +90,8 @@ public enum SecureChannelError: Error, Equatable, Sendable {
   case badChecksumLength(actual: Int)
   /// A secure-messaging response lacked a data object the protocol requires.
   case missingResponseObject(tag: UInt8)
+  /// The mutual authentication exchange did not complete.
+  case authenticationFailed(String)
   /// The card reported that the MAC it computed did not match ours.
   case invalidCryptographicChecksum
 }
