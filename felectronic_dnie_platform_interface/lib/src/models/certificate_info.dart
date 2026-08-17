@@ -62,18 +62,19 @@ class CertificateInfo {
 
   @override
   int get hashCode => Object.hash(
-        subjectCommonName,
-        subjectSerialNumber,
-        issuerCommonName,
-        issuerOrganization,
-        notValidBefore,
-        notValidAfter,
-        serialNumber,
-        isCurrentlyValid,
-      );
+    subjectCommonName,
+    subjectSerialNumber,
+    issuerCommonName,
+    issuerOrganization,
+    notValidBefore,
+    notValidAfter,
+    serialNumber,
+    isCurrentlyValid,
+  );
 
   @override
-  String toString() => 'CertificateInfo('
+  String toString() =>
+      'CertificateInfo('
       'subject: $subjectCommonName, '
       'nif: $subjectSerialNumber, '
       'valid: $isCurrentlyValid, '

@@ -114,9 +114,7 @@ extension DnieStringValidators on String {
   /// Whether this string is a valid 8-16 character PIN.
   bool get isValidPin {
     final trimmed = trim();
-    return trimmed.isNotEmpty &&
-        trimmed.length >= 8 &&
-        trimmed.length <= 16;
+    return trimmed.isNotEmpty && trimmed.length >= 8 && trimmed.length <= 16;
   }
 
   /// Returns a [DnieValidationError] if this is not a valid PIN, or `null`.

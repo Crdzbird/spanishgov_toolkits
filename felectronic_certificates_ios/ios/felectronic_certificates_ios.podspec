@@ -1,14 +1,14 @@
 Pod::Spec.new do |s|
   s.name             = 'felectronic_certificates_ios'
-  s.version          = '0.0.1'
+  s.version          = '1.0.0'
   s.summary          = 'iOS implementation of the felectronic_certificates plugin.'
   s.description      = <<-DESC
 iOS implementation for managing device-stored certificates
 (import, sign, list, delete) using the Security framework and Keychain.
                        DESC
-  s.homepage         = 'https://github.com/crdzbird/felectronic_certificates'
+  s.homepage         = 'https://github.com/Crdzbird/spanishgov_toolkits'
   s.license          = { :type => 'BSD', :file => '../LICENSE' }
-  s.author           = { 'crdzbird' => 'crdzbird@example.com' }
+  s.author           = { 'crdzbird' => 'luisalfonsocb83@gmail.com' }
   s.source           = { :path => '.' }
   s.source_files     = 'felectronic_certificates_ios/Sources/**/*.{swift,h,m}'
   s.dependency 'Flutter'

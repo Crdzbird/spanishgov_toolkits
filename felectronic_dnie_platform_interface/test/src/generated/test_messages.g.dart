@@ -10,7 +10,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:felectronic_dnie_platform_interface/src/generated/messages.g.dart';
 
-
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
   @override
@@ -18,19 +17,19 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is DnieSignedDataMessage) {
+    } else if (value is DnieSignedDataMessage) {
       buffer.putUint8(129);
       writeValue(buffer, value.encode());
-    }    else if (value is DnieCardProbeMessage) {
+    } else if (value is DnieCardProbeMessage) {
       buffer.putUint8(130);
       writeValue(buffer, value.encode());
-    }    else if (value is DnieCertificateDetailsMessage) {
+    } else if (value is DnieCertificateDetailsMessage) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
-    }    else if (value is DniePersonalDataMessage) {
+    } else if (value is DniePersonalDataMessage) {
       buffer.putUint8(132);
       writeValue(buffer, value.encode());
-    }    else if (value is DnieNfcStatusMessage) {
+    } else if (value is DnieNfcStatusMessage) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
     } else {

@@ -10,9 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:meta/meta.dart' show immutable, protected, visibleForTesting;
 
 Object? _extractReplyValueOrThrow(
-    List<Object?>? replyList,
-    String channelName, {
-    required bool isNullValid,
+  List<Object?>? replyList,
+  String channelName, {
+  required bool isNullValid,
 }) {
   if (replyList == null) {
     throw PlatformException(
@@ -46,8 +46,9 @@ bool _deepEquals(Object? a, Object? b) {
   }
   if (a is List && b is List) {
     return a.length == b.length &&
-        a.indexed
-            .every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
+        a.indexed.every(
+          ((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]),
+        );
   }
   if (a is Map && b is Map) {
     if (a.length != b.length) {
@@ -96,7 +97,6 @@ int _deepHash(Object? value) {
   return value.hashCode;
 }
 
-
 /// Result of a successful DNIe signing or certificate-reading operation.
 class DnieSignedDataMessage {
   DnieSignedDataMessage({
@@ -120,7 +120,8 @@ class DnieSignedDataMessage {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static DnieSignedDataMessage decode(Object result) {
     result as List<Object?>;
@@ -140,7 +141,9 @@ class DnieSignedDataMessage {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(signedData, other.signedData) && _deepEquals(signedDataBase64, other.signedDataBase64) && _deepEquals(certificate, other.certificate);
+    return _deepEquals(signedData, other.signedData) &&
+        _deepEquals(signedDataBase64, other.signedDataBase64) &&
+        _deepEquals(certificate, other.certificate);
   }
 
   @override
@@ -174,7 +177,8 @@ class DnieCardProbeMessage {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static DnieCardProbeMessage decode(Object result) {
     result as List<Object?>;
@@ -194,7 +198,9 @@ class DnieCardProbeMessage {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(isValidDnie, other.isValidDnie) && _deepEquals(atrHex, other.atrHex) && _deepEquals(tagId, other.tagId);
+    return _deepEquals(isValidDnie, other.isValidDnie) &&
+        _deepEquals(atrHex, other.atrHex) &&
+        _deepEquals(tagId, other.tagId);
   }
 
   @override
@@ -253,7 +259,8 @@ class DnieCertificateDetailsMessage {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static DnieCertificateDetailsMessage decode(Object result) {
     result as List<Object?>;
@@ -272,13 +279,21 @@ class DnieCertificateDetailsMessage {
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   bool operator ==(Object other) {
-    if (other is! DnieCertificateDetailsMessage || other.runtimeType != runtimeType) {
+    if (other is! DnieCertificateDetailsMessage ||
+        other.runtimeType != runtimeType) {
       return false;
     }
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(subjectCommonName, other.subjectCommonName) && _deepEquals(subjectSerialNumber, other.subjectSerialNumber) && _deepEquals(issuerCommonName, other.issuerCommonName) && _deepEquals(issuerOrganization, other.issuerOrganization) && _deepEquals(notValidBefore, other.notValidBefore) && _deepEquals(notValidAfter, other.notValidAfter) && _deepEquals(serialNumber, other.serialNumber) && _deepEquals(isCurrentlyValid, other.isCurrentlyValid);
+    return _deepEquals(subjectCommonName, other.subjectCommonName) &&
+        _deepEquals(subjectSerialNumber, other.subjectSerialNumber) &&
+        _deepEquals(issuerCommonName, other.issuerCommonName) &&
+        _deepEquals(issuerOrganization, other.issuerOrganization) &&
+        _deepEquals(notValidBefore, other.notValidBefore) &&
+        _deepEquals(notValidAfter, other.notValidAfter) &&
+        _deepEquals(serialNumber, other.serialNumber) &&
+        _deepEquals(isCurrentlyValid, other.isCurrentlyValid);
   }
 
   @override
@@ -327,7 +342,8 @@ class DniePersonalDataMessage {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static DniePersonalDataMessage decode(Object result) {
     result as List<Object?>;
@@ -350,7 +366,12 @@ class DniePersonalDataMessage {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(fullName, other.fullName) && _deepEquals(givenName, other.givenName) && _deepEquals(surnames, other.surnames) && _deepEquals(nif, other.nif) && _deepEquals(country, other.country) && _deepEquals(certificateType, other.certificateType);
+    return _deepEquals(fullName, other.fullName) &&
+        _deepEquals(givenName, other.givenName) &&
+        _deepEquals(surnames, other.surnames) &&
+        _deepEquals(nif, other.nif) &&
+        _deepEquals(country, other.country) &&
+        _deepEquals(certificateType, other.certificateType);
   }
 
   @override
@@ -379,7 +400,8 @@ class DnieNfcStatusMessage {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static DnieNfcStatusMessage decode(Object result) {
     result as List<Object?>;
@@ -398,14 +420,14 @@ class DnieNfcStatusMessage {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(isAvailable, other.isAvailable) && _deepEquals(isEnabled, other.isEnabled);
+    return _deepEquals(isAvailable, other.isAvailable) &&
+        _deepEquals(isEnabled, other.isEnabled);
   }
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
 }
-
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -414,19 +436,19 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is DnieSignedDataMessage) {
+    } else if (value is DnieSignedDataMessage) {
       buffer.putUint8(129);
       writeValue(buffer, value.encode());
-    }    else if (value is DnieCardProbeMessage) {
+    } else if (value is DnieCardProbeMessage) {
       buffer.putUint8(130);
       writeValue(buffer, value.encode());
-    }    else if (value is DnieCertificateDetailsMessage) {
+    } else if (value is DnieCertificateDetailsMessage) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
-    }    else if (value is DniePersonalDataMessage) {
+    } else if (value is DniePersonalDataMessage) {
       buffer.putUint8(132);
       writeValue(buffer, value.encode());
-    }    else if (value is DnieNfcStatusMessage) {
+    } else if (value is DnieNfcStatusMessage) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
     } else {
@@ -459,9 +481,13 @@ class FelectronicDnieHostApi {
   /// Constructor for [FelectronicDnieHostApi].  The [binaryMessenger] named argument is
   /// available for dependency injection.  If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
-  FelectronicDnieHostApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
-      : pigeonVar_binaryMessenger = binaryMessenger,
-        pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+  FelectronicDnieHostApi({
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) : pigeonVar_binaryMessenger = binaryMessenger,
+       pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty
+           ? '.$messageChannelSuffix'
+           : '';
   final BinaryMessenger? pigeonVar_binaryMessenger;
 
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
@@ -471,28 +497,37 @@ class FelectronicDnieHostApi {
   /// Signs [data] using the DNIe private key via NFC.
   ///
   /// [certificateType] selects which certificate to use: `'SIGN'` or `'AUTH'`.
-  Future<DnieSignedDataMessage> sign(Uint8List data, String can, String pin, int timeout, String certificateType) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.sign$pigeonVar_messageChannelSuffix';
+  Future<DnieSignedDataMessage> sign(
+    Uint8List data,
+    String can,
+    String pin,
+    int timeout,
+    String certificateType,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.sign$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[data, can, pin, timeout, certificateType]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[data, can, pin, timeout, certificateType],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as DnieSignedDataMessage;
   }
 
   /// Stops an in-progress NFC signing operation.
   Future<void> stopSign() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.stopSign$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.stopSign$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -502,124 +537,154 @@ class FelectronicDnieHostApi {
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: true,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 
   /// Reads the certificate from the DNIe without signing data.
   ///
   /// [certificateType] selects which certificate to read: `'SIGN'` or `'AUTH'`.
-  Future<DnieSignedDataMessage> readCertificate(String can, String pin, int timeout, String certificateType) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.readCertificate$pigeonVar_messageChannelSuffix';
+  Future<DnieSignedDataMessage> readCertificate(
+    String can,
+    String pin,
+    int timeout,
+    String certificateType,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.readCertificate$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[can, pin, timeout, certificateType]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[can, pin, timeout, certificateType],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as DnieSignedDataMessage;
   }
 
   /// Probes an NFC card to check if it is a valid DNIe.
   /// No CAN or PIN required.
   Future<DnieCardProbeMessage> probeCard(int timeout) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.probeCard$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.probeCard$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[timeout]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[timeout],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as DnieCardProbeMessage;
   }
 
   /// Reads and parses X.509 certificate details from the DNIe.
   ///
   /// [certificateType] selects which certificate: `'SIGN'` or `'AUTH'`.
-  Future<DnieCertificateDetailsMessage> readCertificateDetails(String can, String pin, int timeout, String certificateType) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.readCertificateDetails$pigeonVar_messageChannelSuffix';
+  Future<DnieCertificateDetailsMessage> readCertificateDetails(
+    String can,
+    String pin,
+    int timeout,
+    String certificateType,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.readCertificateDetails$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[can, pin, timeout, certificateType]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[can, pin, timeout, certificateType],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as DnieCertificateDetailsMessage;
   }
 
   /// Reads personal data from the DNIe certificate subject DN.
   ///
   /// [certificateType] selects which certificate: `'SIGN'` or `'AUTH'`.
-  Future<DniePersonalDataMessage> readPersonalData(String can, String pin, int timeout, String certificateType) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.readPersonalData$pigeonVar_messageChannelSuffix';
+  Future<DniePersonalDataMessage> readPersonalData(
+    String can,
+    String pin,
+    int timeout,
+    String certificateType,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.readPersonalData$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[can, pin, timeout, certificateType]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[can, pin, timeout, certificateType],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as DniePersonalDataMessage;
   }
 
   /// Verifies PIN and CAN credentials without signing.
   ///
   /// [certificateType] selects which certificate: `'SIGN'` or `'AUTH'`.
-  Future<void> verifyPin(String can, String pin, int timeout, String certificateType) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.verifyPin$pigeonVar_messageChannelSuffix';
+  Future<void> verifyPin(
+    String can,
+    String pin,
+    int timeout,
+    String certificateType,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.verifyPin$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[can, pin, timeout, certificateType]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[can, pin, timeout, certificateType],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: true,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 
   /// Checks if NFC hardware is available and enabled.
   Future<DnieNfcStatusMessage> checkNfcAvailability() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.checkNfcAvailability$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.checkNfcAvailability$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -629,11 +694,10 @@ class FelectronicDnieHostApi {
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as DnieNfcStatusMessage;
   }
 }

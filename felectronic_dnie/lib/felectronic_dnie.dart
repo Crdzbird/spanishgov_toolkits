@@ -64,14 +64,13 @@ Future<SignedData> sign({
   required String pin,
   int timeout = 30,
   DnieCertificateType certificateType = DnieCertificateType.sign,
-}) =>
-    _platform.sign(
-      data: data,
-      can: can,
-      pin: pin,
-      timeout: timeout,
-      certificateType: certificateType,
-    );
+}) => _platform.sign(
+  data: data,
+  can: can,
+  pin: pin,
+  timeout: timeout,
+  certificateType: certificateType,
+);
 
 /// Stops an in-progress NFC signing operation.
 Future<void> stopSign() => _platform.stopSign();
@@ -82,13 +81,12 @@ Future<SignedData> readCertificate({
   required String pin,
   int timeout = 30,
   DnieCertificateType certificateType = DnieCertificateType.sign,
-}) =>
-    _platform.readCertificate(
-      can: can,
-      pin: pin,
-      timeout: timeout,
-      certificateType: certificateType,
-    );
+}) => _platform.readCertificate(
+  can: can,
+  pin: pin,
+  timeout: timeout,
+  certificateType: certificateType,
+);
 
 /// Probes an NFC card to check if it is a valid Spanish DNIe.
 Future<CardProbeResult> probeCard({int timeout = 30}) =>
@@ -100,13 +98,12 @@ Future<CertificateInfo> readCertificateDetails({
   required String pin,
   int timeout = 30,
   DnieCertificateType certificateType = DnieCertificateType.sign,
-}) =>
-    _platform.readCertificateDetails(
-      can: can,
-      pin: pin,
-      timeout: timeout,
-      certificateType: certificateType,
-    );
+}) => _platform.readCertificateDetails(
+  can: can,
+  pin: pin,
+  timeout: timeout,
+  certificateType: certificateType,
+);
 
 /// Reads personal data from the DNIe certificate subject DN.
 Future<PersonalData> readPersonalData({
@@ -114,13 +111,12 @@ Future<PersonalData> readPersonalData({
   required String pin,
   int timeout = 30,
   DnieCertificateType certificateType = DnieCertificateType.sign,
-}) =>
-    _platform.readPersonalData(
-      can: can,
-      pin: pin,
-      timeout: timeout,
-      certificateType: certificateType,
-    );
+}) => _platform.readPersonalData(
+  can: can,
+  pin: pin,
+  timeout: timeout,
+  certificateType: certificateType,
+);
 
 /// Verifies PIN and CAN credentials without signing.
 Future<void> verifyPin({
@@ -128,14 +124,12 @@ Future<void> verifyPin({
   required String pin,
   int timeout = 30,
   DnieCertificateType certificateType = DnieCertificateType.sign,
-}) =>
-    _platform.verifyPin(
-      can: can,
-      pin: pin,
-      timeout: timeout,
-      certificateType: certificateType,
-    );
+}) => _platform.verifyPin(
+  can: can,
+  pin: pin,
+  timeout: timeout,
+  certificateType: certificateType,
+);
 
 /// Checks if NFC hardware is available and enabled on the device.
-Future<NfcStatus> checkNfcAvailability() =>
-    _platform.checkNfcAvailability();
+Future<NfcStatus> checkNfcAvailability() => _platform.checkNfcAvailability();

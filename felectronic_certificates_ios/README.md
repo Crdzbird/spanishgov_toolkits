@@ -1,6 +1,6 @@
 # felectronic_certificates_ios
 
-The iOS implementation of [`felectronic_certificates`](https://github.com/nicoacevedor/felectronic_dnie/tree/master/felectronic_certificates).
+The iOS implementation of [`felectronic_certificates`](https://github.com/Crdzbird/spanishgov_toolkits/tree/master/felectronic_certificates).
 
 ## Usage
 

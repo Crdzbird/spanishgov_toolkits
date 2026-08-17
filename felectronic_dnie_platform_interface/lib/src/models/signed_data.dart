@@ -61,10 +61,10 @@ class SignedData {
 
   @override
   int get hashCode => Object.hash(
-        signedDataBase64,
-        certificate,
-        Object.hashAll(signedData),
-      );
+    signedDataBase64,
+    certificate,
+    Object.hashAll(signedData),
+  );
 
   @override
   String toString() {

@@ -17,8 +17,7 @@ class FelectronicDnieMock extends FelectronicDniePlatform {
     required String pin,
     int timeout = 30,
     DnieCertificateType certificateType = DnieCertificateType.sign,
-  }) async =>
-      mockResult;
+  }) async => mockResult;
 
   @override
   Future<void> stopSign() async {}
@@ -29,8 +28,7 @@ class FelectronicDnieMock extends FelectronicDniePlatform {
     required String pin,
     int timeout = 30,
     DnieCertificateType certificateType = DnieCertificateType.sign,
-  }) async =>
-      mockResult;
+  }) async => mockResult;
 
   @override
   Future<CardProbeResult> probeCard({int timeout = 30}) async =>
@@ -46,17 +44,16 @@ class FelectronicDnieMock extends FelectronicDniePlatform {
     required String pin,
     int timeout = 30,
     DnieCertificateType certificateType = DnieCertificateType.sign,
-  }) async =>
-      CertificateInfo(
-        subjectCommonName: 'CN',
-        subjectSerialNumber: '12345678Z',
-        issuerCommonName: 'Issuer',
-        issuerOrganization: 'Org',
-        notValidBefore: DateTime(2021),
-        notValidAfter: DateTime(2030),
-        serialNumber: 'abc',
-        isCurrentlyValid: true,
-      );
+  }) async => CertificateInfo(
+    subjectCommonName: 'CN',
+    subjectSerialNumber: '12345678Z',
+    issuerCommonName: 'Issuer',
+    issuerOrganization: 'Org',
+    notValidBefore: DateTime(2021),
+    notValidAfter: DateTime(2030),
+    serialNumber: 'abc',
+    isCurrentlyValid: true,
+  );
 
   @override
   Future<PersonalData> readPersonalData({
@@ -64,15 +61,14 @@ class FelectronicDnieMock extends FelectronicDniePlatform {
     required String pin,
     int timeout = 30,
     DnieCertificateType certificateType = DnieCertificateType.sign,
-  }) async =>
-      const PersonalData(
-        fullName: 'JUAN GARCIA',
-        givenName: 'JUAN',
-        surnames: 'GARCIA',
-        nif: '12345678Z',
-        country: 'ES',
-        certificateType: 'FIRMA',
-      );
+  }) async => const PersonalData(
+    fullName: 'JUAN GARCIA',
+    givenName: 'JUAN',
+    surnames: 'GARCIA',
+    nif: '12345678Z',
+    country: 'ES',
+    certificateType: 'FIRMA',
+  );
 
   @override
   Future<void> verifyPin({
@@ -131,8 +127,7 @@ void main() {
 
     group('readCertificate', () {
       test('returns SignedData', () async {
-        final result =
-            await FelectronicDniePlatform.instance.readCertificate(
+        final result = await FelectronicDniePlatform.instance.readCertificate(
           can: '654321',
           pin: 'myPin',
         );
@@ -140,8 +135,7 @@ void main() {
       });
 
       test('accepts auth certificate type', () async {
-        final result =
-            await FelectronicDniePlatform.instance.readCertificate(
+        final result = await FelectronicDniePlatform.instance.readCertificate(
           can: '654321',
           pin: 'myPin',
           certificateType: DnieCertificateType.auth,
@@ -152,8 +146,8 @@ void main() {
 
     group('checkNfcAvailability', () {
       test('returns NfcStatus', () async {
-        final result =
-            await FelectronicDniePlatform.instance.checkNfcAvailability();
+        final result = await FelectronicDniePlatform.instance
+            .checkNfcAvailability();
         expect(result.isAvailable, isTrue);
         expect(result.isEnabled, isTrue);
       });

@@ -3,8 +3,8 @@ description: >-
   iOS implementation of the felectronic_dnie plugin for DNIe
   NFC operations including signing and certificate reading.
 version: 1.0.0
-repository: https://github.com/nicoacevedor/felectronic_dnie
-issue_tracker: https://github.com/nicoacevedor/felectronic_dnie/issues
+repository: https://github.com/Crdzbird/spanishgov_toolkits
+issue_tracker: https://github.com/Crdzbird/spanishgov_toolkits/issues
 topics:
   - nfc
   - dnie
@@ -13,6 +13,9 @@ topics:
 environment:
   flutter: ">=3.22.0"
   sdk: ^3.11.0
+
+# Part of the pub workspace declared in the repository root pubspec.yaml.
+resolution: workspace
 
 flutter:
   plugin:

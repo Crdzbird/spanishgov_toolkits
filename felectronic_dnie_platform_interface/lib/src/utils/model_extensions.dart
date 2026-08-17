@@ -9,12 +9,10 @@ import 'package:felectronic_x509/felectronic_x509.dart';
 extension CertificateInfoX on CertificateInfo {
   /// Days remaining until the certificate expires.
   /// Negative if already expired.
-  int get daysUntilExpiry =>
-      notValidAfter.difference(DateTime.now()).inDays;
+  int get daysUntilExpiry => notValidAfter.difference(DateTime.now()).inDays;
 
   /// Whether the certificate expires within 30 days.
-  bool get isExpiringSoon =>
-      !isExpired && daysUntilExpiry <= 30;
+  bool get isExpiringSoon => !isExpired && daysUntilExpiry <= 30;
 
   /// Whether the certificate is currently valid for signing.
   bool get isValidForSigning =>
@@ -94,10 +92,8 @@ extension PersonalDataX on PersonalData {
   }
 
   /// Whether this is a signing (FIRMA) certificate.
-  bool get isSigningCert =>
-      certificateType.toUpperCase() == 'FIRMA';
+  bool get isSigningCert => certificateType.toUpperCase() == 'FIRMA';
 
   /// Whether this is an authentication certificate.
-  bool get isAuthCert =>
-      certificateType.toUpperCase() == 'AUTENTICACION';
+  bool get isAuthCert => certificateType.toUpperCase() == 'AUTENTICACION';
 }

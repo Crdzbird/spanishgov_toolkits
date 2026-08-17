@@ -46,16 +46,17 @@ class PersonalData {
 
   @override
   int get hashCode => Object.hash(
-        fullName,
-        givenName,
-        surnames,
-        nif,
-        country,
-        certificateType,
-      );
+    fullName,
+    givenName,
+    surnames,
+    nif,
+    country,
+    certificateType,
+  );
 
   @override
-  String toString() => 'PersonalData('
+  String toString() =>
+      'PersonalData('
       'name: $fullName, '
       'nif: $nif, '
       'type: $certificateType'

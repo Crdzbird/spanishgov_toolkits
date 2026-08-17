@@ -59,12 +59,10 @@ extension ClaveStringValidators on String {
   }
 
   /// Whether this string is a valid support number (C/E + 8 digits).
-  bool get isValidSupportNumber =>
-      DocumentValidator.isValidSupportNumber(this);
+  bool get isValidSupportNumber => DocumentValidator.isValidSupportNumber(this);
 
   /// Whether this string is a valid contrast date (dd-MM-yyyy).
-  bool get isValidContrastDate =>
-      DocumentValidator.isValidContrastDate(this);
+  bool get isValidContrastDate => DocumentValidator.isValidContrastDate(this);
 
   /// Returns a [ClaveValidationError] if this is not a valid document,
   /// or `null`.
@@ -104,8 +102,7 @@ extension ClaveStringValidators on String {
 /// Convenience extensions on [ClaveAuthResult].
 extension ClaveAuthResultX on ClaveAuthResult {
   /// Whether a refresh token is available.
-  bool get hasRefreshToken =>
-      refreshToken != null && refreshToken!.isNotEmpty;
+  bool get hasRefreshToken => refreshToken != null && refreshToken!.isNotEmpty;
 
   /// Computed expiry time, or `null` if [expiresIn] is not set.
   DateTime? get expiresAt => expiresIn != null

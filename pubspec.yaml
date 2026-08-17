@@ -1,0 +1,71 @@
+name: spanishgov_toolkits
+description: >-
+  Monorepo root for the Spanish government toolkit packages. This package is
+  never published; it exists to declare the pub workspace and to host the
+  Melos configuration.
+publish_to: none
+
+environment:
+  # Must satisfy every workspace member. The certificate packages require
+  # ^3.11.0; felectronic_clave and felectronic_x509 allow ^3.4.0, which this
+  # range is compatible with.
+  sdk: ^3.11.0
+
+# Pub workspace (Dart 3.6+). Declaring the members here makes them resolve
+# against each other from the working tree instead of pub.dev, which is what
+# a monorepo needs: previously each package resolved its siblings from
+# pub.dev, so local changes were invisible to their own tests and had to be
+# patched around with hand-written pubspec_overrides.yaml files.
+#
+# A single resolution is shared across every member, so there is one
+# pubspec.lock at the root and dependency conflicts surface immediately
+# rather than per-package.
+workspace:
+  - felectronic_certificates
+  - felectronic_certificates_android
+  - felectronic_certificates_ios
+  - felectronic_certificates_platform_interface
+  - felectronic_clave
+  - felectronic_dnie
+  - felectronic_dnie_android
+  - felectronic_dnie_ios
+  - felectronic_dnie_platform_interface
+  - felectronic_x509
+  - felectronic_dnie/example
+
+dev_dependencies:
+  melos: ^7.0.0
+
+melos:
+  name: spanishgov_toolkits
+
+  scripts:
+    analyze:
+      description: Analyze every package.
+      run: melos exec -- flutter analyze .
+
+    format:
+      description: Format every package.
+      run: melos exec -- dart format .
+
+    format-check:
+      description: Fail if any package is unformatted (what CI enforces).
+      run: melos exec -- dart format --output=none --set-exit-if-changed .
+
+    test:
+      description: Run tests in every package that has them.
+      run: melos exec --dir-exists=test -- flutter test
+
+    test:dart:
+      description: Run tests in pure Dart packages (no Flutter dependency).
+      run: melos exec --dir-exists=test --no-flutter -- dart test
+
+    pigeon:
+      description: Regenerate the Pigeon bindings for the certificates suite.
+      run: |
+        cd felectronic_certificates_platform_interface && \
+        dart run pigeon --input pigeons/messages.dart
+
+    verify:
+      description: Everything CI checks — format, analyze, test.
+      run: melos run format-check && melos run analyze && melos run test

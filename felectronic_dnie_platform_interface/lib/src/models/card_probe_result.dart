@@ -35,7 +35,8 @@ class CardProbeResult {
   int get hashCode => Object.hash(isValidDnie, atrHex, tagId);
 
   @override
-  String toString() => 'CardProbeResult('
+  String toString() =>
+      'CardProbeResult('
       'isValidDnie: $isValidDnie, '
       'atrHex: $atrHex, '
       'tagId: $tagId'

@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-
 /// Well-known X.509 extension OID names.
 const _extensionOidNames = <String, String>{
   '2.5.29.14': 'subjectKeyIdentifier',

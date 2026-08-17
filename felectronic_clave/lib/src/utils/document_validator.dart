@@ -50,8 +50,7 @@ abstract final class DocumentValidator {
   static bool isValidSupportNumber(String supportNumber) =>
       _supportNumberPattern.hasMatch(supportNumber);
 
-  static final _contrastDatePattern =
-      RegExp(r'^\d{2}-\d{2}-\d{4}$');
+  static final _contrastDatePattern = RegExp(r'^\d{2}-\d{2}-\d{4}$');
 
   /// Validates a contrast date string in `dd-MM-yyyy` format.
   static bool isValidContrastDate(String date) {

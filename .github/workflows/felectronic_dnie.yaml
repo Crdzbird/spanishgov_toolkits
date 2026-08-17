@@ -8,12 +8,14 @@ on:
   pull_request:
     paths:
       - ".github/workflows/felectronic_dnie.yaml"
+      - "pubspec.yaml"
       - "felectronic_dnie/**"
   push:
     branches:
-      - main
+      - master
     paths:
       - ".github/workflows/felectronic_dnie.yaml"
+      - "pubspec.yaml"
       - "felectronic_dnie/**"
 
 jobs:

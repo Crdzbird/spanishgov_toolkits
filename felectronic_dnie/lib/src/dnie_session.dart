@@ -24,8 +24,8 @@ class DnieSession {
     required String pin,
     this.certificateType = DnieCertificateType.sign,
     this.timeout = 30,
-  })  : _can = can.trim(),
-        _pin = pin.trim() {
+  }) : _can = can.trim(),
+       _pin = pin.trim() {
     final canError = _can.validateCan();
     if (canError != null) throw ArgumentError(canError.message);
     final pinError = _pin.validatePin();
@@ -45,20 +45,20 @@ class DnieSession {
 
   /// Signs [data] using the DNIe.
   Future<SignedData> sign(Uint8List data) => _platform.sign(
-        data: data,
-        can: _can,
-        pin: _pin,
-        timeout: timeout,
-        certificateType: certificateType,
-      );
+    data: data,
+    can: _can,
+    pin: _pin,
+    timeout: timeout,
+    certificateType: certificateType,
+  );
 
   /// Reads the raw certificate.
   Future<SignedData> readCertificate() => _platform.readCertificate(
-        can: _can,
-        pin: _pin,
-        timeout: timeout,
-        certificateType: certificateType,
-      );
+    can: _can,
+    pin: _pin,
+    timeout: timeout,
+    certificateType: certificateType,
+  );
 
   /// Reads parsed certificate details.
   Future<CertificateInfo> certificateDetails() =>
@@ -71,19 +71,19 @@ class DnieSession {
 
   /// Reads personal data from the certificate.
   Future<PersonalData> personalData() => _platform.readPersonalData(
-        can: _can,
-        pin: _pin,
-        timeout: timeout,
-        certificateType: certificateType,
-      );
+    can: _can,
+    pin: _pin,
+    timeout: timeout,
+    certificateType: certificateType,
+  );
 
   /// Verifies that CAN and PIN are correct.
   Future<void> verifyCredentials() => _platform.verifyPin(
-        can: _can,
-        pin: _pin,
-        timeout: timeout,
-        certificateType: certificateType,
-      );
+    can: _can,
+    pin: _pin,
+    timeout: timeout,
+    certificateType: certificateType,
+  );
 
   /// Stops an in-progress NFC operation.
   Future<void> stop() => _platform.stopSign();

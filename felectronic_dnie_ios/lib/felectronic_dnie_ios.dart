@@ -98,10 +98,12 @@ class FelectronicDnieIOS extends FelectronicDniePlatform {
         subjectSerialNumber: result.subjectSerialNumber,
         issuerCommonName: result.issuerCommonName,
         issuerOrganization: result.issuerOrganization,
-        notValidBefore:
-            DateTime.fromMillisecondsSinceEpoch(result.notValidBefore),
-        notValidAfter:
-            DateTime.fromMillisecondsSinceEpoch(result.notValidAfter),
+        notValidBefore: DateTime.fromMillisecondsSinceEpoch(
+          result.notValidBefore,
+        ),
+        notValidAfter: DateTime.fromMillisecondsSinceEpoch(
+          result.notValidAfter,
+        ),
         serialNumber: result.serialNumber,
         isCurrentlyValid: result.isCurrentlyValid,
       );
@@ -165,8 +167,8 @@ class FelectronicDnieIOS extends FelectronicDniePlatform {
   }
 
   SignedData _toSignedData(DnieSignedDataMessage message) => SignedData(
-        signedData: message.signedData,
-        signedDataBase64: message.signedDataBase64,
-        certificate: message.certificate,
-      );
+    signedData: message.signedData,
+    signedDataBase64: message.signedDataBase64,
+    certificate: message.certificate,
+  );
 }

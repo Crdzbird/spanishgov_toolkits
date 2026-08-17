@@ -10,7 +10,6 @@ import 'package:pigeon/pigeon.dart';
         '../felectronic_dnie_ios/ios/felectronic_dnie_ios/Sources/felectronic_dnie_ios/Messages.g.swift',
   ),
 )
-
 /// Result of a successful DNIe signing or certificate-reading operation.
 class DnieSignedDataMessage {
   DnieSignedDataMessage({

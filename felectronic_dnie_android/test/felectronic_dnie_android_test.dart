@@ -271,8 +271,7 @@ class _MockHostApi implements FelectronicDnieHostApi {
   }
 
   @override
-  Future<DnieCardProbeMessage> probeCard(int timeout) async =>
-      probeCardResult!;
+  Future<DnieCardProbeMessage> probeCard(int timeout) async => probeCardResult!;
 
   @override
   Future<DnieCertificateDetailsMessage> readCertificateDetails(
@@ -308,6 +307,5 @@ class _MockHostApi implements FelectronicDnieHostApi {
   }
 
   @override
-  Future<DnieNfcStatusMessage> checkNfcAvailability() async =>
-      nfcStatusResult!;
+  Future<DnieNfcStatusMessage> checkNfcAvailability() async => nfcStatusResult!;
 }

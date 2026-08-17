@@ -3,8 +3,8 @@ description: >-
   A common platform interface for the felectronic_certificates plugin.
   Defines the shared API for Android and iOS certificate management.
 version: 1.0.0
-repository: https://github.com/nicoacevedor/felectronic_dnie
-issue_tracker: https://github.com/nicoacevedor/felectronic_dnie/issues
+repository: https://github.com/Crdzbird/spanishgov_toolkits
+issue_tracker: https://github.com/Crdzbird/spanishgov_toolkits/issues
 topics:
   - certificate
   - platform-interface
@@ -13,11 +13,14 @@ environment:
   flutter: ">=3.22.0"
   sdk: ^3.11.0
 
+# Part of the pub workspace declared in the repository root pubspec.yaml.
+resolution: workspace
+
 dependencies:
-  meta: ^1.7.0
   felectronic_x509: ^1.0.0
   flutter:
     sdk: flutter
+  meta: ^1.7.0
   plugin_platform_interface: ^2.1.8
 
 dev_dependencies:

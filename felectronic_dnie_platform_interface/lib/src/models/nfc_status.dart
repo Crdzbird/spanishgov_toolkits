@@ -34,7 +34,8 @@ class NfcStatus {
   int get hashCode => Object.hash(isAvailable, isEnabled);
 
   @override
-  String toString() => 'NfcStatus('
+  String toString() =>
+      'NfcStatus('
       'isAvailable: $isAvailable, '
       'isEnabled: $isEnabled'
       ')';

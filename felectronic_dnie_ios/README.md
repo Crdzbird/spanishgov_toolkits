@@ -1,6 +1,6 @@
 # felectronic_dnie_ios
 
-The iOS implementation of [`felectronic_dnie`](https://github.com/nicoacevedor/felectronic_dnie/tree/master/felectronic_dnie).
+The iOS implementation of [`felectronic_dnie`](https://github.com/Crdzbird/spanishgov_toolkits/tree/master/felectronic_dnie).
 
 ## Usage
 

@@ -1,4 +1,3 @@
-
 /// A mapping of well-known OIDs to their short names for distinguished name
 /// attributes.
 const _oidNames = <String, String>{

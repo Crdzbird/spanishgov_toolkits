@@ -26,15 +26,15 @@ sealed class DnieError implements Exception {
       'DSPrivateKeyException' => const DniePrivateKeyError(),
       'DSSigningException' => const DnieSigningError(),
       'DSDNIeWrongPINException' => DnieWrongPinError(
-          remainingRetries: _parseRetries(exception.message),
-        ),
+        remainingRetries: _parseRetries(exception.message),
+      ),
       'DSDNIeWrongCANException' => const DnieWrongCanError(),
       'DSDNIeLockedPINException' => const DnieLockedPinError(),
       'DSNotDNIeException' => const DnieNotDnieError(),
       'DSDNIeDamagedException' => const DnieDamagedError(),
       _ => DnieUnknownError(
-          exception.message ?? 'Unknown error: ${exception.code}',
-        ),
+        exception.message ?? 'Unknown error: ${exception.code}',
+      ),
     };
   }
 
@@ -53,21 +53,21 @@ sealed class DnieError implements Exception {
   String toString() => '${_typeName(this)}: $message';
 
   static String _typeName(DnieError error) => switch (error) {
-        DnieTimeoutError() => 'DnieTimeoutError',
-        DnieCardTagError() => 'DnieCardTagError',
-        DnieProviderError() => 'DnieProviderError',
-        DnieUnderageError() => 'DnieUnderageError',
-        DnieExpiredCertificateError() => 'DnieExpiredCertificateError',
-        DnieConnectionError() => 'DnieConnectionError',
-        DniePrivateKeyError() => 'DniePrivateKeyError',
-        DnieSigningError() => 'DnieSigningError',
-        DnieWrongPinError() => 'DnieWrongPinError',
-        DnieWrongCanError() => 'DnieWrongCanError',
-        DnieLockedPinError() => 'DnieLockedPinError',
-        DnieNotDnieError() => 'DnieNotDnieError',
-        DnieDamagedError() => 'DnieDamagedError',
-        DnieUnknownError() => 'DnieUnknownError',
-      };
+    DnieTimeoutError() => 'DnieTimeoutError',
+    DnieCardTagError() => 'DnieCardTagError',
+    DnieProviderError() => 'DnieProviderError',
+    DnieUnderageError() => 'DnieUnderageError',
+    DnieExpiredCertificateError() => 'DnieExpiredCertificateError',
+    DnieConnectionError() => 'DnieConnectionError',
+    DniePrivateKeyError() => 'DniePrivateKeyError',
+    DnieSigningError() => 'DnieSigningError',
+    DnieWrongPinError() => 'DnieWrongPinError',
+    DnieWrongCanError() => 'DnieWrongCanError',
+    DnieLockedPinError() => 'DnieLockedPinError',
+    DnieNotDnieError() => 'DnieNotDnieError',
+    DnieDamagedError() => 'DnieDamagedError',
+    DnieUnknownError() => 'DnieUnknownError',
+  };
 }
 
 /// {@template dnie_timeout_error}
@@ -76,8 +76,10 @@ sealed class DnieError implements Exception {
 final class DnieTimeoutError extends DnieError {
   /// {@macro dnie_timeout_error}
   const DnieTimeoutError()
-      : super('DNIe card detection timed out. '
-            'Please hold your device near the card.');
+    : super(
+        'DNIe card detection timed out. '
+        'Please hold your device near the card.',
+      );
 }
 
 /// {@template dnie_card_tag_error}
@@ -86,8 +88,10 @@ final class DnieTimeoutError extends DnieError {
 final class DnieCardTagError extends DnieError {
   /// {@macro dnie_card_tag_error}
   const DnieCardTagError()
-      : super('Could not get NFC tag from the card. '
-            'Please try again.');
+    : super(
+        'Could not get NFC tag from the card. '
+        'Please try again.',
+      );
 }
 
 /// {@template dnie_provider_error}
@@ -96,8 +100,10 @@ final class DnieCardTagError extends DnieError {
 final class DnieProviderError extends DnieError {
   /// {@macro dnie_provider_error}
   const DnieProviderError()
-      : super('Failed to create DNIe provider. '
-            'The card may not be a valid DNIe.');
+    : super(
+        'Failed to create DNIe provider. '
+        'The card may not be a valid DNIe.',
+      );
 }
 
 /// {@template dnie_underage_error}
@@ -107,8 +113,10 @@ final class DnieProviderError extends DnieError {
 final class DnieUnderageError extends DnieError {
   /// {@macro dnie_underage_error}
   const DnieUnderageError()
-      : super('Document belongs to an underage user. '
-            'Signing certificates are not available.');
+    : super(
+        'Document belongs to an underage user. '
+        'Signing certificates are not available.',
+      );
 }
 
 /// {@template dnie_expired_certificate_error}
@@ -117,8 +125,10 @@ final class DnieUnderageError extends DnieError {
 final class DnieExpiredCertificateError extends DnieError {
   /// {@macro dnie_expired_certificate_error}
   const DnieExpiredCertificateError()
-      : super('The DNIe certificate has expired. '
-            'Please renew your DNIe.');
+    : super(
+        'The DNIe certificate has expired. '
+        'Please renew your DNIe.',
+      );
 }
 
 /// {@template dnie_connection_error}
@@ -127,8 +137,10 @@ final class DnieExpiredCertificateError extends DnieError {
 final class DnieConnectionError extends DnieError {
   /// {@macro dnie_connection_error}
   const DnieConnectionError()
-      : super('Failed to establish NFC connection with DNIe. '
-            'Please hold the card steady.');
+    : super(
+        'Failed to establish NFC connection with DNIe. '
+        'Please hold the card steady.',
+      );
 }
 
 /// {@template dnie_private_key_error}
@@ -137,7 +149,7 @@ final class DnieConnectionError extends DnieError {
 final class DniePrivateKeyError extends DnieError {
   /// {@macro dnie_private_key_error}
   const DniePrivateKeyError()
-      : super('Failed to access the private key on the DNIe.');
+    : super('Failed to access the private key on the DNIe.');
 }
 
 /// {@template dnie_signing_error}
@@ -145,8 +157,7 @@ final class DniePrivateKeyError extends DnieError {
 /// {@endtemplate}
 final class DnieSigningError extends DnieError {
   /// {@macro dnie_signing_error}
-  const DnieSigningError()
-      : super('Failed to sign data with the DNIe.');
+  const DnieSigningError() : super('Failed to sign data with the DNIe.');
 }
 
 /// {@template dnie_wrong_pin_error}
@@ -155,7 +166,7 @@ final class DnieSigningError extends DnieError {
 final class DnieWrongPinError extends DnieError {
   /// {@macro dnie_wrong_pin_error}
   const DnieWrongPinError({required this.remainingRetries})
-      : super('Wrong PIN entered.');
+    : super('Wrong PIN entered.');
 
   /// Number of PIN attempts remaining before the card locks.
   /// A value of `-1` means the count is unknown.
@@ -181,7 +192,7 @@ final class DnieWrongCanError extends DnieError {
 final class DnieLockedPinError extends DnieError {
   /// {@macro dnie_locked_pin_error}
   const DnieLockedPinError()
-      : super('DNIe locked. Too many incorrect PIN attempts.');
+    : super('DNIe locked. Too many incorrect PIN attempts.');
 }
 
 /// {@template dnie_not_dnie_error}
@@ -190,7 +201,7 @@ final class DnieLockedPinError extends DnieError {
 final class DnieNotDnieError extends DnieError {
   /// {@macro dnie_not_dnie_error}
   const DnieNotDnieError()
-      : super('The card is not a Spanish electronic DNIe.');
+    : super('The card is not a Spanish electronic DNIe.');
 }
 
 /// {@template dnie_damaged_error}
@@ -198,8 +209,7 @@ final class DnieNotDnieError extends DnieError {
 /// {@endtemplate}
 final class DnieDamagedError extends DnieError {
   /// {@macro dnie_damaged_error}
-  const DnieDamagedError()
-      : super('The DNIe appears to be damaged.');
+  const DnieDamagedError() : super('The DNIe appears to be damaged.');
 }
 
 /// {@template dnie_unknown_error}

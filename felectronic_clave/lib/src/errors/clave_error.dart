@@ -54,8 +54,7 @@ final class ClaveSessionExpiredError extends ClaveError {
 /// {@endtemplate}
 final class ClaveRefusedError extends ClaveError {
   /// {@macro clave_refused_error}
-  const ClaveRefusedError()
-      : super('Authentication was refused.');
+  const ClaveRefusedError() : super('Authentication was refused.');
 }
 
 /// {@template clave_discovery_failed_error}

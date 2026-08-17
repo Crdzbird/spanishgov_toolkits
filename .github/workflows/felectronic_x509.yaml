@@ -1,0 +1,31 @@
+name: felectronic_x509
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/felectronic_x509.yaml"
+      - "pubspec.yaml"
+      - "felectronic_x509/**"
+  push:
+    branches:
+      - master
+    paths:
+      - ".github/workflows/felectronic_x509.yaml"
+      - "pubspec.yaml"
+      - "felectronic_x509/**"
+
+jobs:
+  build:
+    # felectronic_x509 has no Flutter dependency, so it uses the Dart
+    # workflow: it needs only the Dart SDK and runs `dart test` directly.
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/dart_package.yml@v1
+    with:
+      working_directory: felectronic_x509
+      # Ratchet at the current measured level so CI is green today and
+      # coverage cannot regress. Raise as tests are added; the workflow
+      # default is 100.
+      min_coverage: 35

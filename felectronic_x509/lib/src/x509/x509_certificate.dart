@@ -397,8 +397,7 @@ class X509Certificate {
   }
 
   @override
-  String toString() =>
-      'X509Certificate(subject=${subject.distinguishedName}, '
+  String toString() => 'X509Certificate(subject=${subject.distinguishedName}, '
       'issuer=${issuer.distinguishedName}, '
       'serial=$serialNumber, '
       'valid=$notValidBefore..$notValidAfter)';

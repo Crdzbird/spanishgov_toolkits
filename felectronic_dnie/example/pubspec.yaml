@@ -6,13 +6,13 @@ publish_to: none
 environment:
   sdk: ^3.11.0
 
+# Part of the pub workspace declared in the repository root pubspec.yaml.
+resolution: workspace
+
 dependencies:
-  felectronic_certificates:
-    path: ../../felectronic_certificates
-  felectronic_clave:
-    path: ../../felectronic_clave
-  felectronic_dnie:
-    path: ../
+  felectronic_certificates: ^1.0.0
+  felectronic_clave: ^1.0.0
+  felectronic_dnie: ^1.0.0
   flutter:
     sdk: flutter
 

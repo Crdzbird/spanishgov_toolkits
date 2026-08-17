@@ -9,8 +9,7 @@ import 'package:felectronic_x509/src/asn1/asn1_tag.dart';
 class Asn1Reader {
   /// Creates a reader over the given byte buffer starting at the given
   /// position.
-  Asn1Reader(this._bytes, [this._offset = 0])
-      : _end = _bytes.length;
+  Asn1Reader(this._bytes, [this._offset = 0]) : _end = _bytes.length;
 
   /// Creates a reader over a sub-range of the byte buffer.
   Asn1Reader._(this._bytes, this._offset, this._end);
@@ -311,9 +310,8 @@ class Asn1Reader {
     final day = int.parse(s.substring(4, 6));
     final hour = int.parse(s.substring(6, 8));
     final minute = int.parse(s.substring(8, 10));
-    final second = s.length >= 12 && s[10] != 'Z'
-        ? int.parse(s.substring(10, 12))
-        : 0;
+    final second =
+        s.length >= 12 && s[10] != 'Z' ? int.parse(s.substring(10, 12)) : 0;
     return DateTime.utc(year, month, day, hour, minute, second);
   }
 

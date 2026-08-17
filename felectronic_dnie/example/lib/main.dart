@@ -68,8 +68,7 @@ class _DnieTab extends StatefulWidget {
   State<_DnieTab> createState() => _DnieTabState();
 }
 
-class _DnieTabState extends State<_DnieTab>
-    with AutomaticKeepAliveClientMixin {
+class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
   final _canCtl = TextEditingController();
   final _pinCtl = TextEditingController();
   String _status = 'Ready';
@@ -133,13 +132,12 @@ class _DnieTabState extends State<_DnieTab>
   Future<void> _runValidated(
     String loadingMsg,
     Future<void> Function() action,
-  ) =>
-      _run(() async {
-        final error = _validate();
-        if (error != null) return setState(() => _status = error);
-        setState(() => _status = loadingMsg);
-        await action();
-      });
+  ) => _run(() async {
+    final error = _validate();
+    if (error != null) return setState(() => _status = error);
+    setState(() => _status = loadingMsg);
+    await action();
+  });
 
   @override
   void dispose() {
@@ -159,8 +157,7 @@ class _DnieTabState extends State<_DnieTab>
             icon: Icons.nfc,
             message: _nfc!.statusMessage,
           ),
-        if (_nfc != null && !_nfc!.isReady)
-          const SizedBox(height: 16),
+        if (_nfc != null && !_nfc!.isReady) const SizedBox(height: 16),
 
         SegmentedButton<DnieCertificateType>(
           segments: const [
@@ -176,8 +173,7 @@ class _DnieTabState extends State<_DnieTab>
             ),
           ],
           selected: {_certType},
-          onSelectionChanged: (s) =>
-              setState(() => _certType = s.first),
+          onSelectionChanged: (s) => setState(() => _certType = s.first),
         ),
         const SizedBox(height: 16),
         TextField(
@@ -214,10 +210,9 @@ class _DnieTabState extends State<_DnieTab>
             setState(() => _status = 'Hold card near...');
             final p = await probeCard();
             setState(() {
-              _status = p.isValidDnie
-                  ? 'Valid DNIe!'
-                  : 'Not a DNIe.';
-              _result = 'ATR: ${p.atrHex}\n'
+              _status = p.isValidDnie ? 'Valid DNIe!' : 'Not a DNIe.';
+              _result =
+                  'ATR: ${p.atrHex}\n'
                   'Tag: ${p.tagId}';
             });
           }),
@@ -251,7 +246,8 @@ class _DnieTabState extends State<_DnieTab>
             );
             setState(() {
               _status = 'Signed (${_certType.value})!';
-              _result = 'Complete: ${s.isComplete}\n'
+              _result =
+                  'Complete: ${s.isComplete}\n'
                   'Size: ${s.signatureSizeBytes} bytes';
             });
           }),
@@ -308,7 +304,8 @@ class _DnieTabState extends State<_DnieTab>
             );
             setState(() {
               _status = 'Personal data read!';
-              _result = 'Name: ${pd.fullName}\n'
+              _result =
+                  'Name: ${pd.fullName}\n'
                   'Initials: ${pd.initials}\n'
                   'NIF: ${pd.nif}\n'
                   'Country: ${pd.country}\n'
@@ -337,14 +334,16 @@ class _DnieTabState extends State<_DnieTab>
             if (x == null) {
               setState(() {
                 _status = 'Failed to parse';
-                _result = 'Certificate could not be '
+                _result =
+                    'Certificate could not be '
                     'parsed from base64.';
               });
               return;
             }
             setState(() {
               _status = 'X.509 v${x.version} parsed!';
-              _result = 'Subject DN:\n'
+              _result =
+                  'Subject DN:\n'
                   '  ${x.subject.distinguishedName}\n'
                   '  CN: ${x.subject.commonName}\n'
                   '  O: ${x.subject.organization}\n'
@@ -359,10 +358,10 @@ class _DnieTabState extends State<_DnieTab>
                   '${x.signatureAlgorithmName}\n'
                   'Key: ${x.publicKeyAlgorithm} '
                   '${x.publicKeySize}-bit\n'
-                  'Valid: ${x.notValidBefore.toIso8601String()
-                      .split('T').first}'
-                  ' to ${x.notValidAfter.toIso8601String()
-                      .split('T').first}\n'
+                  'Valid: '
+                  '${x.notValidBefore.toIso8601String().split('T').first}'
+                  ' to '
+                  '${x.notValidAfter.toIso8601String().split('T').first}\n'
                   'Self-signed: ${x.isSelfSigned}\n'
                   'Days left: ${x.daysUntilExpiry}\n\n'
                   'Key usage: '
@@ -398,8 +397,7 @@ class _DnieTabState extends State<_DnieTab>
               certificateType: _certType,
             );
             setState(() {
-              _status =
-                  r.isReady ? 'Ready!' : 'Not ready';
+              _status = r.isReady ? 'Ready!' : 'Not ready';
               _result =
                   'NFC: ${r.nfcStatus.statusMessage}\n'
                   'Valid DNIe: ${r.isValidDnie}\n'
@@ -421,10 +419,9 @@ class _DnieTabState extends State<_DnieTab>
               certificateType: _certType,
             );
             setState(() {
-              _status = id.isValid
-                  ? 'Identity OK'
-                  : 'Cert invalid';
-              _result = 'Name: ${id.fullName}\n'
+              _status = id.isValid ? 'Identity OK' : 'Cert invalid';
+              _result =
+                  'Name: ${id.fullName}\n'
                   'NIF: ${id.nif}\n'
                   'Valid: ${id.isValid}\n'
                   '${id.certificateInfo.expiryStatus}';
@@ -447,7 +444,8 @@ class _DnieTabState extends State<_DnieTab>
             setState(() {
               if (r != null) {
                 _status = 'Probe + Sign OK!';
-                _result = 'Complete: ${r.isComplete}\n'
+                _result =
+                    'Complete: ${r.isComplete}\n'
                     'Size: ${r.signatureSizeBytes} bytes';
               } else {
                 _status = 'Card is not a valid DNIe.';
@@ -482,7 +480,8 @@ class _DnieTabState extends State<_DnieTab>
             final pd = await session.personalData();
             setState(() {
               _status = 'Session complete!';
-              _result = 'Name: ${pd.fullName}\n'
+              _result =
+                  'Name: ${pd.fullName}\n'
                   'NIF: ${pd.nif}\n'
                   '${info.expiryStatus}\n'
                   'Signing OK: ${info.isValidForSigning}';
@@ -516,8 +515,7 @@ class _DnieTabState extends State<_DnieTab>
 class _CertificatesTab extends StatefulWidget {
   const _CertificatesTab();
   @override
-  State<_CertificatesTab> createState() =>
-      _CertificatesTabState();
+  State<_CertificatesTab> createState() => _CertificatesTabState();
 }
 
 class _CertificatesTabState extends State<_CertificatesTab>
@@ -579,7 +577,7 @@ class _CertificatesTabState extends State<_CertificatesTab>
               _status = '${l.length} certificate(s).';
               _result = l.isEmpty
                   ? 'No certificates found.\n'
-                      'Use "Select" to pick one.'
+                        'Use "Select" to pick one.'
                   : l.map(_fmt).join('\n\n');
             });
           }),
@@ -591,8 +589,7 @@ class _CertificatesTabState extends State<_CertificatesTab>
           subtitle: 'Opens system picker',
           onPressed: () => _run(() async {
             setState(() => _status = 'Opening picker...');
-            final c =
-                await certs.selectDefaultCertificate();
+            final c = await certs.selectDefaultCertificate();
             setState(() {
               if (c != null) {
                 _status = 'Selected: ${c.displayName}';
@@ -651,7 +648,8 @@ class _CertificatesTabState extends State<_CertificatesTab>
             }
             setState(() {
               _status = 'X.509 v${x.version}';
-              _result = 'Subject:\n'
+              _result =
+                  'Subject:\n'
                   '  ${x.subject.distinguishedName}\n\n'
                   'Issuer:\n'
                   '  ${x.issuer.distinguishedName}\n\n'
@@ -687,8 +685,7 @@ class _CertificatesTabState extends State<_CertificatesTab>
           filled: false,
           onPressed: () => _run(() async {
             setState(() => _status = 'Opening picker...');
-            final s =
-                await certs.CertificateSession.select();
+            final s = await certs.CertificateSession.select();
             if (s == null) {
               setState(
                 () => _status = 'No cert selected.',
@@ -712,8 +709,7 @@ class _CertificatesTabState extends State<_CertificatesTab>
           subtitle: 'No picker, use existing default',
           filled: false,
           onPressed: () => _run(() async {
-            final s =
-                await certs.CertificateSession.fromDefault();
+            final s = await certs.CertificateSession.fromDefault();
             if (s == null) {
               setState(() {
                 _status = 'No default set.';
@@ -742,8 +738,7 @@ class _CertificatesTabState extends State<_CertificatesTab>
           onPressed: () => _run(() async {
             setState(() => _status = 'Signing...');
             final data = utf8.encode('Test data');
-            final sig = await certs
-                .signWithDefaultCertificate(data);
+            final sig = await certs.signWithDefaultCertificate(data);
             setState(() {
               _status = 'Signed!';
               _result = 'Signature: ${sig.length} bytes';
@@ -831,8 +826,7 @@ class _ClaveTabState extends State<_ClaveTab>
                 hintText: 'e.g. 12345678Z',
                 border: OutlineInputBorder(),
               ),
-              textCapitalization:
-                  TextCapitalization.characters,
+              textCapitalization: TextCapitalization.characters,
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 12),
@@ -873,8 +867,7 @@ class _ClaveTabState extends State<_ClaveTab>
           children: [
             Text(
               'Test values:',
-              style:
-                  Theme.of(context).textTheme.bodySmall,
+              style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -918,8 +911,7 @@ class _ClaveTabState extends State<_ClaveTab>
                     Icons.shield,
                     color: switch (l) {
                       ClaveLoaLevel.low => Colors.green,
-                      ClaveLoaLevel.medium =>
-                        Colors.orange,
+                      ClaveLoaLevel.medium => Colors.orange,
                       ClaveLoaLevel.high => Colors.red,
                     },
                   ),
@@ -952,11 +944,11 @@ class _ClaveTabState extends State<_ClaveTab>
       return;
     }
     final type = doc.documentType ?? 'Unknown';
-    final ct =
-        DocumentValidator.contrastTypeFor(doc) ?? '?';
+    final ct = DocumentValidator.contrastTypeFor(doc) ?? '?';
     setState(() {
       _status = 'Valid $type!';
-      _result = 'Document: $doc\n'
+      _result =
+          'Document: $doc\n'
           'Type: $type\n'
           'Valid: ${doc.isValidDocument}\n'
           'Contrast needed: $ct';
@@ -967,8 +959,7 @@ class _ClaveTabState extends State<_ClaveTab>
     final doc = _docCtl.text.trim();
     final contrast = _contrastCtl.text.trim();
     final isDni = DocumentValidator.isDni(doc);
-    final error =
-        contrast.validateContrast(isDni: isDni);
+    final error = contrast.validateContrast(isDni: isDni);
     if (error != null) {
       setState(() {
         _status = error.message;
@@ -978,7 +969,8 @@ class _ClaveTabState extends State<_ClaveTab>
     }
     setState(() {
       _status = 'Valid contrast!';
-      _result = 'Contrast: $contrast\n'
+      _result =
+          'Contrast: $contrast\n'
           'Format: ${isDni ? 'Date' : 'Support number'}';
     });
   }
@@ -1012,14 +1004,12 @@ class _ClaveTabState extends State<_ClaveTab>
   }
 
   IconData _icon(ClaveAuthMethod m) => switch (m) {
-        ClaveAuthMethod.clavePin => Icons.pin,
-        ClaveAuthMethod.clavePermanente => Icons.lock,
-        ClaveAuthMethod.electronicCertificate =>
-          Icons.badge,
-        ClaveAuthMethod.europeanCredential =>
-          Icons.language,
-        ClaveAuthMethod.claveMovil => Icons.phone_android,
-      };
+    ClaveAuthMethod.clavePin => Icons.pin,
+    ClaveAuthMethod.clavePermanente => Icons.lock,
+    ClaveAuthMethod.electronicCertificate => Icons.badge,
+    ClaveAuthMethod.europeanCredential => Icons.language,
+    ClaveAuthMethod.claveMovil => Icons.phone_android,
+  };
 }
 
 // =============================================================================
@@ -1054,12 +1044,9 @@ class _Section extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Text(
         title,
-        style: Theme.of(context)
-            .textTheme
-            .titleSmall
-            ?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-            ),
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+          color: Theme.of(context).colorScheme.primary,
+        ),
       ),
     );
   }
@@ -1128,8 +1115,7 @@ class _StatusCard extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: SelectableText(
                 result,
-                style:
-                    Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
           ),
@@ -1169,8 +1155,7 @@ class _Btn extends StatelessWidget {
               if (subtitle != null)
                 Text(
                   subtitle!,
-                  style:
-                      Theme.of(context).textTheme.bodySmall,
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
             ],
           ),
