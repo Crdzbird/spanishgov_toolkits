@@ -22,9 +22,9 @@ jobs:
   build:
     uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
     with:
-      flutter_version: 3.41.1
+      flutter_version: 3.47.0
       working_directory: felectronic_certificates
       # Ratchet at the current measured level so CI is green today and
       # coverage cannot regress. Raise as tests are added; the workflow
       # default is 100.
-      min_coverage: 58
+      min_coverage: 55

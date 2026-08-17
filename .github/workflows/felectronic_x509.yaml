@@ -20,10 +20,13 @@ on:
 
 jobs:
   build:
-    # felectronic_x509 has no Flutter dependency, so it uses the Dart
-    # workflow: it needs only the Dart SDK and runs `dart test` directly.
-    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/dart_package.yml@v1
+    # felectronic_x509 has no Flutter dependency of its own, but it is a
+    # member of the pub workspace, so resolving it pulls in the Flutter
+    # packages and requires the Flutter SDK. dart_package.yml exposes no
+    # Flutter inputs, hence the Flutter workflow.
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
     with:
+      flutter_version: 3.47.0
       working_directory: felectronic_x509
       # Ratchet at the current measured level so CI is green today and
       # coverage cannot regress. Raise as tests are added; the workflow
