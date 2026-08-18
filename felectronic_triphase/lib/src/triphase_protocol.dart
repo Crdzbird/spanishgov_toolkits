@@ -3,17 +3,26 @@ import 'dart:typed_data';
 
 /// The advanced-signature envelope to produce.
 ///
-/// The @firma service builds these; the client only ever contributes a raw
-/// PKCS#1 signature over a payload the server hands back.
+/// The @firma service builds these; the client only ever contributes a
+/// signature over a payload the server hands back.
+///
+/// ## The wire names are lowercase
+///
+/// The standards spell these CAdES, PAdES and XAdES, and an earlier revision
+/// here sent them that way. Both platform implementations send them
+/// lowercase, including the Kotlin one that has run against the real service,
+/// so lowercase is what goes on the wire. Whether the service is
+/// case-insensitive is unknown and not worth discovering in production.
 enum SignatureFormat {
-  /// Binary documents.
-  cades('CAdES'),
+  /// Binary documents. The general-purpose choice, and what a caller signing
+  /// arbitrary bytes wants.
+  cades('cades'),
 
   /// PDF.
-  pades('PAdES'),
+  pades('pades'),
 
   /// XML.
-  xades('XAdES');
+  xades('xades');
 
   const SignatureFormat(this.wireName);
 

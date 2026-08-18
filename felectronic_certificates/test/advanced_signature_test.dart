@@ -130,7 +130,7 @@ void main() {
 
       expect(utf8.decode(result), 'top-level');
       expect(bodies[0], contains('algo=SHA512withRSA'));
-      expect(bodies[0], contains('format=CAdES'));
+      expect(bodies[0], contains('format=cades'));
     });
 
     /// Unlike the session method, this entry point has to find a certificate
@@ -216,7 +216,7 @@ void main() {
 
       expect(utf8.decode(result), 'envelope');
       expect(bodies, hasLength(2));
-      expect(bodies[0], contains('format=PAdES'));
+      expect(bodies[0], contains('format=pades'));
       expect(bodies[0], contains('algo=SHA256withRSA'));
     });
 

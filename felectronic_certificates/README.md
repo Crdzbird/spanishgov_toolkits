@@ -50,6 +50,9 @@ final signature = await session.sign(
 > a choice this package makes. Consider it before signing confidential
 > material.
 
+Pick the format to match the document: `cades` for arbitrary binary, `pades`
+for PDF, `xades` for XML.
+
 The network is yours: `transport` is required whenever `format` is given, so
 timeouts, proxying and certificate pinning stay under your control. See
 [`felectronic_triphase`](../felectronic_triphase/README.md) for a

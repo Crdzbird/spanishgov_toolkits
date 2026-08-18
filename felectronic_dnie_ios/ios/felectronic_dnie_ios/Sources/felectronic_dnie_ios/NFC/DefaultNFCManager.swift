@@ -246,7 +246,15 @@ extension DefaultNFCManager {
         pin: pin,
         certAlias: certAlias,
         signatureAlgorithm: SignatureAlgorithm.sha512withRSA.rawValue,
-        signatureFormat: SignatureFormat.xades.rawValue,
+        // CAdES, matching Android. The two platforms disagreed here — this
+        // sent XAdES while TriPhaseSignerManager sent CAdES — so the same
+        // call produced a different envelope depending on the device.
+        //
+        // Android wins for two reasons: it is the only one of the two that
+        // has ever run, so nothing depends on the iOS choice; and CAdES is
+        // the right default for `sign(data)`, which takes arbitrary bytes.
+        // XAdES envelopes XML, and this API is not XML-specific.
+        signatureFormat: SignatureFormat.cades.rawValue,
         data: data
     ) { [weak self] response, nfcError in
       guard let self else { return }

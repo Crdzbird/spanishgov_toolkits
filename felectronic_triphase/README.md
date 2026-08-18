@@ -108,10 +108,18 @@ ever run against the real service:
 | this package | not yet | matched against the Kotlin |
 
 Every encoding decision here follows the Kotlin. That matters more than it
-sounds: the two platform implementations disagree with each other. The Swift
-sends the certificate as standard base64 and defaults to XAdES; the Kotlin
-sends it URL-safe and defaults to CAdES. Where they differ, the one that
-works wins.
+sounds — where the two platform implementations disagreed, the Swift was
+wrong, because it has never run to be proved otherwise. It sent the
+certificate as standard base64 rather than URL-safe, and defaulted to XAdES
+where Android sent CAdES, so the same call produced a different envelope
+depending on the device. Both are now aligned to Android.
+
+One spelling is worth calling out because it looks like a mistake and is not:
+the formats go on the wire **lowercase** (`cades`, `pades`, `xades`) even
+though the standards capitalize them, while the algorithms keep their
+mixed-case Java spelling (`SHA512withRSA`). Both platform implementations do
+this. Tidying the formats into `CAdES` would be a change the service never
+asked for.
 
 ## Status
 

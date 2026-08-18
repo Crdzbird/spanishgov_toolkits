@@ -85,7 +85,7 @@ void main() {
         extraParams: '',
       );
       expect(body, startsWith('op=pre&cop=sign'));
-      expect(body, contains('format=PAdES'));
+      expect(body, contains('format=pades'));
       expect(body, contains('algo=SHA256withRSA'));
       expect(body, contains('cert=$certificate'));
     });
@@ -148,18 +148,39 @@ void main() {
         extraParams: '',
       );
       expect(body, startsWith('op=post&cop=sign'));
-      expect(body, contains('format=XAdES'));
+      expect(body, contains('format=xades'));
       expect(body, contains('algo=SHA512withRSA'));
       expect(body, contains('&session='));
     });
 
-    /// The wire names are Java's and the service matches on them exactly.
-    test('format and algorithm wire names are the Java spellings', () {
-      expect(SignatureFormat.cades.wireName, 'CAdES');
-      expect(SignatureFormat.pades.wireName, 'PAdES');
-      expect(SignatureFormat.xades.wireName, 'XAdES');
+    /// Pinned against what the platform implementations actually send. The
+    /// formats are lowercase despite the standards spelling them CAdES,
+    /// PAdES and XAdES; the algorithms keep their mixed-case Java spelling.
+    /// Both were read off the Kotlin implementation that runs against the
+    /// real service, and the iOS Swift agrees on every one.
+    test('wire names match what the platforms send', () {
+      expect(SignatureFormat.cades.wireName, 'cades');
+      expect(SignatureFormat.pades.wireName, 'pades');
+      expect(SignatureFormat.xades.wireName, 'xades');
+
       expect(SignatureAlgorithm.sha256withRsa.wireName, 'SHA256withRSA');
       expect(SignatureAlgorithm.sha512withRsa.wireName, 'SHA512withRSA');
+    });
+
+    /// The two vocabularies differ in case, which is easy to "tidy" into a
+    /// consistency the service never asked for.
+    test('formats are lowercase and algorithms are not', () {
+      for (final format in SignatureFormat.values) {
+        final wire = format.wireName;
+        expect(wire, wire.toLowerCase(), reason: '$format');
+      }
+      for (final algorithm in SignatureAlgorithm.values) {
+        expect(
+          algorithm.wireName,
+          isNot(algorithm.wireName.toLowerCase()),
+          reason: '$algorithm',
+        );
+      }
     });
 
     test('strips the success prefix the service prepends', () {
