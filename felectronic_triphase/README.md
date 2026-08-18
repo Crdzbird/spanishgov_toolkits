@@ -142,10 +142,12 @@ Android reports only the HTTP status text. The session is located by parsing
 rather than by regex, which tolerates a `PRE` value that spans lines. And the
 network and key are the caller's, so this package holds neither.
 
-One difference is a gap, not a choice: Android sends the full certificate
-chain, comma-separated. `certificateBase64` accepts that form, but the iOS
-keystore path can only supply the leaf, so that is what it sends. A service
-that needs intermediates to validate will reject it.
+The certificate chain matches: Android sends every certificate
+comma-separated, and so does this. `certificateBase64` takes that form —
+`TriphaseRequests.certificateChain` builds it — and the separator survives
+the URL-safe rewrite because it is not part of any base64 value. Callers
+that can only supply a leaf still work, but a service that does not already
+hold the issuer needs the intermediates to validate.
 
 ## Status
 
