@@ -19,6 +19,7 @@ class DeviceCertificate {
     required this.usages,
     required this.encoded,
     this.alias,
+    this.chain = const [],
   });
 
   /// Builds a certificate from a platform message.
@@ -56,6 +57,7 @@ class DeviceCertificate {
           ? const []
           : CertKeyUsage.fromX509Flags(parsed.keyUsage),
       encoded: message.encoded,
+      chain: message.chain ?? const [],
     );
   }
 
@@ -83,6 +85,21 @@ class DeviceCertificate {
 
   /// DER-encoded certificate bytes.
   final Uint8List encoded;
+
+  /// The certificate chain, leaf first, DER-encoded.
+  ///
+  /// Empty when the platform could not build one — not a claim that the
+  /// certificate is self-signed. [signingChain] is the accessor to use; it
+  /// falls back to [encoded] so callers never have to handle the empty case.
+  final List<Uint8List> chain;
+
+  /// The chain to present when signing, always at least the leaf.
+  ///
+  /// The @firma service needs the intermediates to validate a certificate
+  /// whose issuer it does not already hold. Falling back to the leaf keeps a
+  /// platform that cannot build a chain working wherever the issuer is
+  /// already trusted, rather than failing outright.
+  List<Uint8List> get signingChain => chain.isEmpty ? [encoded] : chain;
 
   @override
   bool operator ==(Object other) =>

@@ -547,6 +547,11 @@ class ElectronicCertificatesPlugin :
             serialNumber = canonicalSerialOf(cert),
             alias = alias,
             encoded = cert.encoded,
+            // The keystore already returned the whole chain above; only the
+            // leaf was being kept. The signing service needs the
+            // intermediates to validate a certificate whose issuer it does
+            // not already hold.
+            chain = chain.map { it.encoded },
         )
     }
 
@@ -558,6 +563,9 @@ class ElectronicCertificatesPlugin :
             serialNumber = canonicalSerialOf(info.certificate),
             alias = info.alias,
             encoded = info.certificate.encoded,
+            // The AAR surfaces a single certificate, so there is no chain to
+            // pass on. Dart falls back to the leaf.
+            chain = null,
         )
     }
 

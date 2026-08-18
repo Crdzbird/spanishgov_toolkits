@@ -123,6 +123,7 @@ class DeviceCertificateMessage {
     required this.serialNumber,
     this.alias,
     required this.encoded,
+    this.chain,
   });
 
   /// Certificate serial number, canonically encoded.
@@ -143,11 +144,23 @@ class DeviceCertificateMessage {
   /// DER-encoded certificate: the source of truth for every other field.
   Uint8List encoded;
 
+  /// The certificate chain, leaf first, DER-encoded.
+  ///
+  /// Present when the keystore can supply it. The @firma signing service is
+  /// given the whole chain so it can validate a certificate whose issuer it
+  /// does not already hold; sending the leaf alone is enough only when the
+  /// service already trusts the issuer.
+  ///
+  /// Null means the platform could not build a chain, not that none exists.
+  /// Callers should fall back to [encoded].
+  List<Uint8List>? chain;
+
   List<Object?> _toList() {
     return <Object?>[
       serialNumber,
       alias,
       encoded,
+      chain,
     ];
   }
 
@@ -161,6 +174,7 @@ class DeviceCertificateMessage {
       serialNumber: result[0]! as String,
       alias: result[1] as String?,
       encoded: result[2]! as Uint8List,
+      chain: (result[3] as List<Object?>?)?.cast<Uint8List>(),
     );
   }
 
@@ -176,7 +190,8 @@ class DeviceCertificateMessage {
     }
     return _deepEquals(serialNumber, other.serialNumber) &&
         _deepEquals(alias, other.alias) &&
-        _deepEquals(encoded, other.encoded);
+        _deepEquals(encoded, other.encoded) &&
+        _deepEquals(chain, other.chain);
   }
 
   @override

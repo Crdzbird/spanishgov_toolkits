@@ -54,6 +54,32 @@ class FelectronicCertificatesMock extends FelectronicCertificatesPlatform {
 }
 
 void main() {
+  group('DeviceCertificate chain', () {
+    DeviceCertificateMessage message({List<Uint8List>? chain}) =>
+        DeviceCertificateMessage(
+          serialNumber: '0a1b',
+          encoded: Uint8List.fromList([0x30, 0x82, 0x01, 0x0A]),
+          chain: chain,
+        );
+
+    test('carries the chain the platform supplied', () {
+      final leaf = Uint8List.fromList([1]);
+      final root = Uint8List.fromList([2]);
+      final cert = DeviceCertificate.fromMessage(message(chain: [leaf, root]));
+      expect(cert.chain, [leaf, root]);
+      expect(cert.signingChain, [leaf, root]);
+    });
+
+    /// A platform that cannot build a path sends null. That is not a claim
+    /// the certificate is self-signed, and callers must still be able to
+    /// sign — so the accessor falls back to the leaf.
+    test('falls back to the leaf when the platform sent none', () {
+      final cert = DeviceCertificate.fromMessage(message());
+      expect(cert.chain, isEmpty);
+      expect(cert.signingChain, [cert.encoded]);
+    });
+  });
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('FelectronicCertificatesPlatformInterface', () {

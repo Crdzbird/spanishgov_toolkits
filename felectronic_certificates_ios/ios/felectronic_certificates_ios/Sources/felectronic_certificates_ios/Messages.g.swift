@@ -213,6 +213,16 @@ struct DeviceCertificateMessage: Hashable {
   var alias: String? = nil
   /// DER-encoded certificate: the source of truth for every other field.
   var encoded: FlutterStandardTypedData
+  /// The certificate chain, leaf first, DER-encoded.
+  ///
+  /// Present when the keystore can supply it. The @firma signing service is
+  /// given the whole chain so it can validate a certificate whose issuer it
+  /// does not already hold; sending the leaf alone is enough only when the
+  /// service already trusts the issuer.
+  ///
+  /// Null means the platform could not build a chain, not that none exists.
+  /// Callers should fall back to [encoded].
+  var chain: [FlutterStandardTypedData]? = nil
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
@@ -220,11 +230,13 @@ struct DeviceCertificateMessage: Hashable {
     let serialNumber = pigeonVar_list[0] as! String
     let alias: String? = nilOrValue(pigeonVar_list[1])
     let encoded = pigeonVar_list[2] as! FlutterStandardTypedData
+    let chain: [FlutterStandardTypedData]? = nilOrValue(pigeonVar_list[3])
 
     return DeviceCertificateMessage(
       serialNumber: serialNumber,
       alias: alias,
-      encoded: encoded
+      encoded: encoded,
+      chain: chain
     )
   }
   func toList() -> [Any?] {
@@ -232,13 +244,14 @@ struct DeviceCertificateMessage: Hashable {
       serialNumber,
       alias,
       encoded,
+      chain,
     ]
   }
   static func == (lhs: DeviceCertificateMessage, rhs: DeviceCertificateMessage) -> Bool {
     if Swift.type(of: lhs) != Swift.type(of: rhs) {
       return false
     }
-    return deepEqualsMessages(lhs.serialNumber, rhs.serialNumber) && deepEqualsMessages(lhs.alias, rhs.alias) && deepEqualsMessages(lhs.encoded, rhs.encoded)
+    return deepEqualsMessages(lhs.serialNumber, rhs.serialNumber) && deepEqualsMessages(lhs.alias, rhs.alias) && deepEqualsMessages(lhs.encoded, rhs.encoded) && deepEqualsMessages(lhs.chain, rhs.chain)
   }
 
   func hash(into hasher: inout Hasher) {
@@ -246,6 +259,7 @@ struct DeviceCertificateMessage: Hashable {
     deepHashMessages(value: serialNumber, hasher: &hasher)
     deepHashMessages(value: alias, hasher: &hasher)
     deepHashMessages(value: encoded, hasher: &hasher)
+    deepHashMessages(value: chain, hasher: &hasher)
   }
 }
 

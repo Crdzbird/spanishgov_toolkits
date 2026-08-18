@@ -224,6 +224,15 @@ abstract final class TriphaseRequests {
   /// comment lines, so the plain `mode=implicit` sent here parses the same.
   static const defaultExtraParams = 'mode=implicit';
 
+  /// Joins a certificate chain into the single `cert` value, leaf first.
+  ///
+  /// Android sends every certificate separated by commas and falls back to
+  /// the leaf alone only when `includeOnlySigningCertificate` is set. Each
+  /// element is base64; the separator is not part of any of them, so the
+  /// rewrite to the URL-safe alphabet leaves it alone.
+  static String certificateChain(Iterable<List<int>> chain) =>
+      chain.map(base64.encode).join(',');
+
   /// The pre-sign body: asks the service what to sign.
   static String preSign({
     required String certificateBase64,

@@ -92,7 +92,12 @@ class CertificateSession {
     }
     return TriphaseClient(transport: transport, serviceUrl: serviceUrl).sign(
       document: data,
-      certificateBase64: base64.encode(certificate.encoded),
+      // Every certificate the platform could supply, comma-separated, which
+      // is the form Android's signer sends. The service needs the
+      // intermediates to validate a certificate whose issuer it does not
+      // already hold; `signingChain` falls back to the leaf when the platform
+      // could not build a path.
+      certificateBase64: certificate.signingChain.map(base64.encode).join(','),
       format: format,
       algorithm: algorithm.triphaseAlgorithm,
       extraParams: extraParams,

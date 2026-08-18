@@ -162,8 +162,45 @@ class KeychainCertificateManager {
 
         return CertificateInfo(
             serialNumber: copySerialHex(from: cert),
-            encoded: SecCertificateCopyData(cert) as Data
+            encoded: SecCertificateCopyData(cert) as Data,
+            chain: copyCertificateChain(for: cert)
         )
+    }
+
+    /// Builds the certificate chain, leaf first.
+    ///
+    /// The signing service needs the intermediates to validate a certificate
+    /// whose issuer it does not already hold, and unlike Android's
+    /// `KeyChain.getCertificateChain` there is no API here that simply hands
+    /// one over: the chain has to be built by evaluating trust, which is what
+    /// makes iOS fill in the intermediates it holds.
+    ///
+    /// Evaluation is run for its side effect, and its **verdict is ignored**.
+    /// An expired or untrusted certificate still yields the path that was
+    /// built, and refusing to return one here would turn a signing attempt
+    /// into a silent failure far from the cause. Whether to trust the
+    /// certificate is `validateTrust(for:)`'s question, not this one.
+    ///
+    /// Returns an empty array if no path could be built at all; the Dart side
+    /// then falls back to the leaf.
+    private func copyCertificateChain(for certificate: SecCertificate) -> [Data] {
+        guard let trust = createTrust(for: certificate) else { return [] }
+
+        var error: CFError?
+        _ = SecTrustEvaluateWithError(trust, &error)
+
+        // SecTrustCopyCertificateChain arrived in iOS 15; this pod targets
+        // 13. The older pair is deprecated rather than removed, and is the
+        // only way to read the path on 13 and 14.
+        let certificates: [SecCertificate]
+        if #available(iOS 15.0, *) {
+            certificates = SecTrustCopyCertificateChain(trust) as? [SecCertificate] ?? []
+        } else {
+            certificates = (0..<SecTrustGetCertificateCount(trust)).compactMap {
+                SecTrustGetCertificateAtIndex(trust, $0)
+            }
+        }
+        return certificates.map { SecCertificateCopyData($0) as Data }
     }
 
     // MARK: - Delete
@@ -386,4 +423,11 @@ struct CertificateInfo {
     /// DER-encoded certificate: the single source of truth for issuer,
     /// validity and key usage.
     let encoded: Data
+
+    /// The chain, leaf first, DER-encoded.
+    ///
+    /// Empty when a chain could not be built. That is not a claim the
+    /// certificate is self-signed — only that the Keychain and the system
+    /// anchors could not complete a path from it.
+    let chain: [Data]
 }

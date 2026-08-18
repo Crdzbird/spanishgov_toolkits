@@ -264,6 +264,73 @@ void main() {
       );
     });
 
+    /// Android sends every certificate it has, comma-separated. A service
+    /// that does not already hold the issuer needs the intermediates to
+    /// validate, and would reject a lone leaf.
+    test('the whole chain is sent, comma-separated and leaf first', () async {
+      final bodies = <String>[];
+      Future<TriphaseResponse> transport(TriphaseRequest request) async {
+        bodies.add(request.body);
+        final payload = base64.encode(utf8.encode('p'));
+        final body = bodies.length == 1
+            ? '<xml><firma><param n="PRE">$payload</param></firma></xml>'
+            : 'OK NEWID=${base64Url.encode(utf8.encode('e'))}';
+        return TriphaseResponse(
+          statusCode: 200,
+          body: body.startsWith('OK')
+              ? body
+              : base64Url.encode(utf8.encode(body)).replaceAll('=', ''),
+        );
+      }
+
+      await (await session()).sign(
+        Uint8List.fromList([1]),
+        format: SignatureFormat.cades,
+        transport: transport,
+      );
+
+      final cert = bodies[0].split('&cert=').last.split('&').first;
+      final parts = cert.split(',');
+      expect(parts, hasLength(3), reason: 'leaf, intermediate and root');
+      expect(
+        TriphaseCodec.decode(parts[0]),
+        _FakePlatform.certificateDer,
+        reason: 'the leaf comes first',
+      );
+      expect(TriphaseCodec.decode(parts[2]), _FakePlatform.rootDer);
+      // The separator must survive the url-safe rewrite.
+      expect(cert, contains(','));
+    });
+
+    /// A platform that cannot build a chain must still be able to sign.
+    test('a platform with no chain falls back to the leaf', () async {
+      platform.hasChain = false;
+      final bodies = <String>[];
+      Future<TriphaseResponse> transport(TriphaseRequest request) async {
+        bodies.add(request.body);
+        final payload = base64.encode(utf8.encode('p'));
+        final body = bodies.length == 1
+            ? '<xml><firma><param n="PRE">$payload</param></firma></xml>'
+            : 'OK NEWID=${base64Url.encode(utf8.encode('e'))}';
+        return TriphaseResponse(
+          statusCode: 200,
+          body: body.startsWith('OK')
+              ? body
+              : base64Url.encode(utf8.encode(body)).replaceAll('=', ''),
+        );
+      }
+
+      await (await session()).sign(
+        Uint8List.fromList([1]),
+        format: SignatureFormat.pades,
+        transport: transport,
+      );
+
+      final cert = bodies[0].split('&cert=').last.split('&').first;
+      expect(cert.split(','), hasLength(1));
+      expect(TriphaseCodec.decode(cert), _FakePlatform.certificateDer);
+    });
+
     /// The platform signs the payload the service asked for, not the document.
     test('the key signs the service payload, not the document', () async {
       Future<TriphaseResponse> transport(TriphaseRequest request) async {
@@ -340,19 +407,27 @@ class _FakePlatform extends FelectronicCertificatesPlatform
     0xBF,
   ]);
 
+  /// An intermediate and a root, as a keystore would supply them.
+  static final intermediateDer = Uint8List.fromList([0x30, 0x82, 0x11, 0x22]);
+  static final rootDer = Uint8List.fromList([0x30, 0x82, 0x33, 0x44]);
+
+  /// Whether the platform can build a chain. Some keystores cannot.
+  bool hasChain = true;
+
   /// Everything handed to the private key, in order.
   final List<Uint8List> signedPayloads = [];
 
   /// Whether a default certificate is selected on the device.
   bool hasDefault = true;
 
-  static final _certificate = DeviceCertificate(
+  DeviceCertificate get _certificate => DeviceCertificate(
     serialNumber: '0a1b',
     holderName: 'Test Holder',
     issuerName: 'Test CA',
     expirationDate: DateTime.utc(2030),
     usages: const [],
     encoded: certificateDer,
+    chain: hasChain ? [certificateDer, intermediateDer, rootDer] : const [],
   );
 
   @override

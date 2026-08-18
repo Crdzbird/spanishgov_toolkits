@@ -36,6 +36,7 @@ class DeviceCertificateMessage {
     required this.serialNumber,
     required this.encoded,
     this.alias,
+    this.chain,
   });
 
   /// Certificate serial number, canonically encoded.
@@ -55,6 +56,17 @@ class DeviceCertificateMessage {
 
   /// DER-encoded certificate: the source of truth for every other field.
   final Uint8List encoded;
+
+  /// The certificate chain, leaf first, DER-encoded.
+  ///
+  /// Present when the keystore can supply it. The @firma signing service is
+  /// given the whole chain so it can validate a certificate whose issuer it
+  /// does not already hold; sending the leaf alone is enough only when the
+  /// service already trusts the issuer.
+  ///
+  /// Null means the platform could not build a chain, not that none exists.
+  /// Callers should fall back to [encoded].
+  final List<Uint8List>? chain;
 }
 
 /// Host API for device-stored certificate operations, implemented

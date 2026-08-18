@@ -244,7 +244,19 @@ data class DeviceCertificateMessage (
    */
   val alias: String? = null,
   /** DER-encoded certificate: the source of truth for every other field. */
-  val encoded: ByteArray
+  val encoded: ByteArray,
+  /**
+   * The certificate chain, leaf first, DER-encoded.
+   *
+   * Present when the keystore can supply it. The @firma signing service is
+   * given the whole chain so it can validate a certificate whose issuer it
+   * does not already hold; sending the leaf alone is enough only when the
+   * service already trusts the issuer.
+   *
+   * Null means the platform could not build a chain, not that none exists.
+   * Callers should fall back to [encoded].
+   */
+  val chain: List<ByteArray>? = null
 )
  {
   companion object {
@@ -252,7 +264,8 @@ data class DeviceCertificateMessage (
       val serialNumber = pigeonVar_list[0] as String
       val alias = pigeonVar_list[1] as String?
       val encoded = pigeonVar_list[2] as ByteArray
-      return DeviceCertificateMessage(serialNumber, alias, encoded)
+      val chain = pigeonVar_list[3] as List<ByteArray>?
+      return DeviceCertificateMessage(serialNumber, alias, encoded, chain)
     }
   }
   fun toList(): List<Any?> {
@@ -260,6 +273,7 @@ data class DeviceCertificateMessage (
       serialNumber,
       alias,
       encoded,
+      chain,
     )
   }
   override fun equals(other: Any?): Boolean {
@@ -270,7 +284,7 @@ data class DeviceCertificateMessage (
       return true
     }
     val other = other as DeviceCertificateMessage
-    return MessagesPigeonUtils.deepEquals(this.serialNumber, other.serialNumber) && MessagesPigeonUtils.deepEquals(this.alias, other.alias) && MessagesPigeonUtils.deepEquals(this.encoded, other.encoded)
+    return MessagesPigeonUtils.deepEquals(this.serialNumber, other.serialNumber) && MessagesPigeonUtils.deepEquals(this.alias, other.alias) && MessagesPigeonUtils.deepEquals(this.encoded, other.encoded) && MessagesPigeonUtils.deepEquals(this.chain, other.chain)
   }
 
   override fun hashCode(): Int {
@@ -278,6 +292,7 @@ data class DeviceCertificateMessage (
     result = 31 * result + MessagesPigeonUtils.deepHash(this.serialNumber)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.alias)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.encoded)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.chain)
     return result
   }
 }

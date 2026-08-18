@@ -257,7 +257,10 @@ public class FelectronicCertificatesPlugin: NSObject, FlutterPlugin, Felectronic
         return DeviceCertificateMessage(
             serialNumber: info.serialNumber,
             alias: attrs[kSecAttrLabel as String] as? String,
-            encoded: FlutterStandardTypedData(bytes: info.encoded)
+            encoded: FlutterStandardTypedData(bytes: info.encoded),
+            chain: info.chain.isEmpty
+                ? nil
+                : info.chain.map { FlutterStandardTypedData(bytes: $0) }
         )
     }
 }
