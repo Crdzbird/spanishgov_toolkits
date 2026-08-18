@@ -56,16 +56,24 @@ class TriphaseClient {
 
   /// Runs all three phases and returns the assembled signature.
   ///
-  /// [certificateBase64] is the signing certificate, base64-encoded, as the
-  /// service expects it. [signPkcs1] is called exactly once, with the payload
-  /// the service asked for.
+  /// [certificateBase64] is the signing certificate, base64-encoded.
+  ///
+  /// It may also be a **chain**: Android sends every certificate joined with
+  /// commas, and only falls back to the leaf alone when
+  /// `includeOnlySigningCertificate` is set. A service that needs the
+  /// intermediates to validate will reject a lone leaf, so pass the chain when
+  /// the platform can supply one. The iOS keystore path currently exposes a
+  /// single certificate, and sends that.
+  ///
+  /// [signPkcs1] is called exactly once, with the payload the service asked
+  /// for.
   Future<Uint8List> sign({
     required Uint8List document,
     required String certificateBase64,
     required SignatureFormat format,
     required SignatureAlgorithm algorithm,
     required Pkcs1Signer signPkcs1,
-    String extraParams = '',
+    String extraParams = TriphaseRequests.defaultExtraParams,
   }) async {
     final session = await preSign(
       document: document,
@@ -93,7 +101,7 @@ class TriphaseClient {
     required String certificateBase64,
     required SignatureFormat format,
     required SignatureAlgorithm algorithm,
-    String extraParams = '',
+    String extraParams = TriphaseRequests.defaultExtraParams,
   }) async {
     final body = await _send(
       TriphaseRequests.preSign(
@@ -115,7 +123,7 @@ class TriphaseClient {
     required TriphaseSession session,
     required SignatureFormat format,
     required SignatureAlgorithm algorithm,
-    String extraParams = '',
+    String extraParams = TriphaseRequests.defaultExtraParams,
   }) async {
     if (!session.hasSignature) {
       throw const TriphaseProtocolException(
@@ -133,11 +141,7 @@ class TriphaseClient {
       ),
       phase: 'post-sign',
     );
-    return TriphaseCodec.decode(
-      TriphaseRequests.stripPostSignPrefix(
-        utf8.decode(TriphaseCodec.decode(body), allowMalformed: true),
-      ),
-    );
+    return TriphaseRequests.decodePostSignResult(body);
   }
 
   Future<String> _send(String body, {required String phase}) async {

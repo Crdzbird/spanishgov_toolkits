@@ -77,7 +77,7 @@ class CertificateSession {
     SignatureFormat? format,
     TriphaseTransport? transport,
     Uri? serviceUrl,
-    String extraParams = '',
+    String extraParams = TriphaseRequests.defaultExtraParams,
   }) {
     if (format == null) {
       return _platform.signWithDefaultCertificate(data, algorithm: algorithm);

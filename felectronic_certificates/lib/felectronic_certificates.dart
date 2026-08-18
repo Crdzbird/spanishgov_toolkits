@@ -32,6 +32,7 @@ export 'package:felectronic_triphase/felectronic_triphase.dart'
         TriphaseException,
         TriphaseProtocolException,
         TriphaseRequest,
+        TriphaseRequests,
         TriphaseResponse,
         TriphaseServiceException,
         TriphaseTransport,
@@ -105,7 +106,7 @@ Future<Uint8List> signWithDefaultCertificate(
   SignatureFormat? format,
   TriphaseTransport? transport,
   Uri? serviceUrl,
-  String extraParams = '',
+  String extraParams = TriphaseRequests.defaultExtraParams,
 }) async {
   if (format == null) {
     return _platform.signWithDefaultCertificate(data, algorithm: algorithm);

@@ -121,9 +121,36 @@ mixed-case Java spelling (`SHA512withRSA`). Both platform implementations do
 this. Tidying the formats into `CAdES` would be a change the service never
 asked for.
 
+## What has been diffed against the Kotlin
+
+The whole protocol surface, line by line:
+
+- endpoint, method and `Content-Type`
+- request field names, order, and when `params` is present
+- every encoding: URL-safe with padding for `cert`, `doc` and `session`;
+  standard for `params`
+- `format` lowercase, algorithm mixed case
+- pre-sign response: base64 to XML
+- `PRE` extraction and decoding
+- signing as a full hash-then-sign
+- `PK1` insertion position, and preserving the document as text
+- post-sign response: plain text, `OK` prefix required, then decode
+- `ERR-` detection
+
+Three differences are deliberate. Failures carry the response body, where
+Android reports only the HTTP status text. The session is located by parsing
+rather than by regex, which tolerates a `PRE` value that spans lines. And the
+network and key are the caller's, so this package holds neither.
+
+One difference is a gap, not a choice: Android sends the full certificate
+chain, comma-separated. `certificateBase64` accepts that form, but the iOS
+keystore path can only supply the leaf, so that is what it sends. A service
+that needs intermediates to validate will reject it.
+
 ## Status
 
 Covered end to end by tests against a fake service. **No request from this
-package has reached the real service.** If the protocol has been misread, the
-fake and the client are wrong together and every test still passes — only a
-live call settles that.
+package has reached the real service.** The diff above is the strongest
+evidence available short of a live call, and it is what found the defects
+this package shipped with — the tests did not, because the fake was written
+from the same misreading as the client.

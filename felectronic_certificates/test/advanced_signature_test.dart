@@ -115,9 +115,12 @@ void main() {
         final body = bodies.length == 1
             ? '<xml><firma><param n="PRE">$payload</param></firma></xml>'
             : 'OK NEWID=$envelope';
+        // Pre-sign answers base64; post-sign answers plain text.
         return TriphaseResponse(
           statusCode: 200,
-          body: base64Url.encode(utf8.encode(body)).replaceAll('=', ''),
+          body: body.startsWith('OK')
+              ? body
+              : base64Url.encode(utf8.encode(body)).replaceAll('=', ''),
         );
       }
 
@@ -202,9 +205,12 @@ void main() {
         final body = call == 1
             ? '<xml><firma><param n="PRE">$payload</param></firma></xml>'
             : 'OK NEWID=$envelope';
+        // Pre-sign answers base64; post-sign answers plain text.
         return TriphaseResponse(
           statusCode: 200,
-          body: base64Url.encode(utf8.encode(body)).replaceAll('=', ''),
+          body: body.startsWith('OK')
+              ? body
+              : base64Url.encode(utf8.encode(body)).replaceAll('=', ''),
         );
       }
 
@@ -230,9 +236,12 @@ void main() {
             ? '<xml><firma><param n="PRE">$payload</param></firma></xml>'
             : 'OK NEWID='
                   '${base64Url.encode(utf8.encode('e')).replaceAll('=', '')}';
+        // Pre-sign answers base64; post-sign answers plain text.
         return TriphaseResponse(
           statusCode: 200,
-          body: base64Url.encode(utf8.encode(body)).replaceAll('=', ''),
+          body: body.startsWith('OK')
+              ? body
+              : base64Url.encode(utf8.encode(body)).replaceAll('=', ''),
         );
       }
 
@@ -263,9 +272,12 @@ void main() {
             ? '<xml><firma><param n="PRE">$payload</param></firma></xml>'
             : 'OK NEWID='
                   '${base64Url.encode(utf8.encode('e')).replaceAll('=', '')}';
+        // Pre-sign answers base64; post-sign answers plain text.
         return TriphaseResponse(
           statusCode: 200,
-          body: base64Url.encode(utf8.encode(body)).replaceAll('=', ''),
+          body: body.startsWith('OK')
+              ? body
+              : base64Url.encode(utf8.encode(body)).replaceAll('=', ''),
         );
       }
 

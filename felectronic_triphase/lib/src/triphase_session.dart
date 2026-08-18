@@ -16,7 +16,24 @@ import 'package:xml/xml.dart';
 /// Everything else is the service's own state and is carried through
 /// untouched. That is the whole reason the session is handed back rather than
 /// re-derived: only the service knows what is in it.
+///
+/// ## The document is kept as text, not as a tree
+///
+/// The signature is spliced in by string insertion, and the document is
+/// returned exactly as it arrived apart from that insertion. Parsing and
+/// re-serializing would be tidier, but a serializer is free to normalize
+/// quoting, self-closing tags, whitespace and entity escapes — and the
+/// service is handed this document back as its own state. The Android
+/// implementation, which is the only one that has run against the real
+/// service, does string insertion for exactly this reason.
+///
+/// Reading is still done with a parser: Android locates `PRE` with the regex
+/// `<param n="PRE">(.*?)</param>`, which quietly fails if the value spans a
+/// line or the attribute is quoted differently. Parsing to read and splicing
+/// to write gives the robustness without the risk.
 class TriphaseSession {
+  TriphaseSession._(this._xml);
+
   /// Parses a session document.
   ///
   /// Throws [TriphaseProtocolException] rather than returning an empty
@@ -27,23 +44,23 @@ class TriphaseSession {
       throw const TriphaseProtocolException('the session document was empty');
     }
     try {
-      return TriphaseSession._(XmlDocument.parse(xml));
+      XmlDocument.parse(xml);
     } on XmlException catch (error) {
       throw TriphaseProtocolException(
         'the session document is not valid XML: '
         '${error.message}',
       );
     }
+    return TriphaseSession._(xml);
   }
-  TriphaseSession._(this._document);
 
-  final XmlDocument _document;
+  String _xml;
 
-  /// Every `<param>` in the document, at any depth.
-  Iterable<XmlElement> get _params => _document.findAllElements('param');
+  static const _preTag = '<param n="PRE">';
+  static const _closeTag = '</param>';
 
   XmlElement? _param(String name) {
-    for (final element in _params) {
+    for (final element in XmlDocument.parse(_xml).findAllElements('param')) {
       if (element.getAttribute('n') == name) return element;
     }
     return null;
@@ -51,10 +68,9 @@ class TriphaseSession {
 
   /// The payload to sign, decoded from the `PRE` parameter.
   ///
-  /// The original client returned the base64 *text* rather than its decoded
-  /// bytes, leaving the caller to decide what to do with it. This decodes,
-  /// because what gets signed is the bytes; handing back a string invites the
-  /// caller to sign the base64 of the payload instead of the payload.
+  /// Decoded rather than handed back as base64 text: what gets signed is the
+  /// bytes, and returning the text invites a caller to sign the encoding
+  /// instead. Android decodes here too.
   Uint8List get payloadToSign {
     final element = _param('PRE');
     if (element == null) {
@@ -73,37 +89,35 @@ class TriphaseSession {
   /// Whether the service has already been given a signature.
   bool get hasSignature => _param('PK1') != null;
 
-  /// Adds the PKCS#1 signature as a `PK1` parameter, beside `PRE`.
+  /// Splices the PKCS#1 signature in as a `PK1` parameter.
   ///
-  /// Placing it beside `PRE` matters: the service reads the pair together. The
-  /// original client appended to every second-level element it found, which
-  /// would add a `PK1` to unrelated branches of a document with more than one.
+  /// Placed immediately after `PRE` closes, which is where Android puts it.
+  /// Appending to the end of the enclosing element would also be valid XML,
+  /// but position is not something to differ from the working implementation
+  /// on when the service's parsing is unknown.
   void attachSignature(Uint8List signature) {
     if (hasSignature) {
       throw const TriphaseProtocolException(
         'this session already carries a signature',
       );
     }
-    final pre = _param('PRE');
-    if (pre == null) {
+    final start = _xml.indexOf(_preTag);
+    if (start == -1) {
       throw const TriphaseProtocolException(
         'cannot attach a signature to a session with no PRE parameter',
       );
     }
-    final parent = pre.parent;
-    if (parent == null) {
-      throw const TriphaseProtocolException('the PRE parameter has no parent');
+    final close = _xml.indexOf(_closeTag, start + _preTag.length);
+    if (close == -1) {
+      throw const TriphaseProtocolException(
+        'the PRE parameter is not closed',
+      );
     }
-
-    parent.children.add(
-      XmlElement(
-        XmlName('param'),
-        [XmlAttribute(XmlName('n'), 'PK1')],
-        [XmlText(base64.encode(signature))],
-      ),
-    );
+    final insertAt = close + _closeTag.length;
+    final pk1 = '<param n="PK1">${base64.encode(signature)}</param>';
+    _xml = '${_xml.substring(0, insertAt)}\n$pk1\n${_xml.substring(insertAt)}';
   }
 
   /// The document as text, for the post-sign request.
-  String toXmlString() => _document.toXmlString();
+  String toXmlString() => _xml;
 }

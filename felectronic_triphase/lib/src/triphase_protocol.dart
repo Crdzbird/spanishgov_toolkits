@@ -212,6 +212,18 @@ abstract final class TriphaseCodec {
 /// to care, but there is no reason to differ from a request shape that the
 /// Android build exercises.
 abstract final class TriphaseRequests {
+  /// The extra parameters both platform implementations send.
+  ///
+  /// Android builds `Properties{mode=implicit}` and iOS passes the literal
+  /// `"mode=implicit"`; neither ever omits it. The mode decides whether the
+  /// signed document is embedded in the envelope or referenced, so leaving it
+  /// to the service's default is a different signature, not a tidier request.
+  ///
+  /// Android serializes its properties with `Properties.store`, which prefixes
+  /// a `#`-comment line carrying a timestamp. A Java properties reader ignores
+  /// comment lines, so the plain `mode=implicit` sent here parses the same.
+  static const defaultExtraParams = 'mode=implicit';
+
   /// The pre-sign body: asks the service what to sign.
   static String preSign({
     required String certificateBase64,
@@ -251,7 +263,34 @@ abstract final class TriphaseRequests {
       ? ''
       : '&params=${TriphaseCodec.standard(utf8.encode(extraParams))}';
 
-  /// Strips the `OK NEWID=` prefix the service puts on a successful post-sign.
-  static String stripPostSignPrefix(String decoded) =>
-      decoded.replaceFirst('OK NEWID=', '');
+  /// The prefix the service puts on a successful post-sign response.
+  static const okPrefix = 'OK NEWID=';
+
+  /// Extracts the signature from a post-sign response body.
+  ///
+  /// The body is **plain text**, not base64: `OK NEWID=<base64url payload>`.
+  /// An earlier revision decoded the whole body as base64 first, having
+  /// misread the Swift helper `base64StringFromBase64UrlEncoded` — which
+  /// rewrites the alphabet and restores padding, and does not decode. That
+  /// spurious layer would have failed against the real service, and the tests
+  /// did not catch it because the fake encoded its responses to match.
+  ///
+  /// A body that does not begin with `OK` is a failure. Android checks this
+  /// and reports the body; stripping the prefix unconditionally would turn a
+  /// rejection into a base64 error several steps later.
+  static Uint8List decodePostSignResult(String body) {
+    final trimmed = body.trim();
+    if (!trimmed.startsWith('OK')) {
+      throw TriphaseServiceException(
+        'post-sign was rejected: $trimmed',
+        body: trimmed,
+      );
+    }
+    // Android takes the prefix's length rather than matching it, so a body of
+    // 'OK' alone yields an empty payload rather than an error.
+    final payload = trimmed.length >= okPrefix.length
+        ? trimmed.substring(okPrefix.length)
+        : '';
+    return TriphaseCodec.decode(payload);
+  }
 }

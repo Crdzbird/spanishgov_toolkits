@@ -105,6 +105,13 @@ void main() {
       expect(body, isNot(contains('+')));
     });
 
+    /// Both platforms always send mode=implicit; it is the default here for
+    /// the same reason. The mode decides whether the document is embedded in
+    /// the envelope, so omitting it is a different signature.
+    test('mode=implicit is what both platforms send', () {
+      expect(TriphaseRequests.defaultExtraParams, 'mode=implicit');
+    });
+
     /// Android appends the field only when there is something to send.
     test('params is omitted when empty and present when not', () {
       String bodyWith(String extra) => TriphaseRequests.preSign(
@@ -183,9 +190,33 @@ void main() {
       }
     });
 
-    test('strips the success prefix the service prepends', () {
-      expect(TriphaseRequests.stripPostSignPrefix('OK NEWID=abc'), 'abc');
-      expect(TriphaseRequests.stripPostSignPrefix('abc'), 'abc');
+    /// The post-sign body is plain text carrying a base64 payload after the
+    /// prefix — it is not itself base64. An earlier revision decoded the whole
+    /// body first, and the fake encoded its responses to match, so both were
+    /// wrong together and the tests passed.
+    test('the post-sign body is plain text, not base64', () {
+      final payload = utf8.encode('the finished envelope');
+      final body = 'OK NEWID=${base64Url.encode(payload)}';
+      expect(TriphaseRequests.decodePostSignResult(body), payload);
+    });
+
+    test('a post-sign body is trimmed before it is read', () {
+      final body = '  OK NEWID=${base64Url.encode(utf8.encode('x'))}\n';
+      expect(TriphaseRequests.decodePostSignResult(body), utf8.encode('x'));
+    });
+
+    /// Android requires the OK prefix and reports the body otherwise.
+    /// Stripping unconditionally would turn a rejection into a base64 error
+    /// several steps later, pointing at the wrong thing.
+    test('a body without the OK prefix is a failure', () {
+      expect(
+        () => TriphaseRequests.decodePostSignResult('KO something went wrong'),
+        throwsA(isA<TriphaseServiceException>()),
+      );
+      expect(
+        () => TriphaseRequests.decodePostSignResult('ERR-06: bad document'),
+        throwsA(isA<TriphaseServiceException>()),
+      );
     });
   });
 
@@ -270,9 +301,8 @@ void main() {
         call++;
         return TriphaseResponse(
           statusCode: status,
-          body: call == 1
-              ? encodeResponse(preResponse)
-              : encodeResponse(postResponse),
+          // Pre-sign answers base64; post-sign answers plain text.
+          body: call == 1 ? encodeResponse(preResponse) : postResponse,
         );
       }
 
