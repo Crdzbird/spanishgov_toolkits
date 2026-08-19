@@ -46,7 +46,12 @@ class ClaveTokenStorage {
   // --- Backup Tokens (for LOA elevation) ---
 
   /// Backs up the current tokens before attempting a higher LOA login.
+  ///
+  /// Any previous backup is discarded first. Without that, elevating from a
+  /// logged-out state would leave an older session's backup in place, and a
+  /// later failed elevation would restore it.
   Future<void> backupTokens() async {
+    await clearBackup();
     final results = await Future.wait([getAccessToken(), getRefreshToken()]);
     final access = results[0];
     final refresh = results[1];
@@ -61,18 +66,36 @@ class ClaveTokenStorage {
   }
 
   /// Restores tokens from backup (after a failed LOA elevation).
+  ///
+  /// A slot with no backup is deleted rather than left alone, so a failed
+  /// elevation from a logged-out state ends logged out instead of keeping
+  /// whatever the failed attempt managed to write.
   Future<void> restoreBackup() async {
     final result = await Future.wait<String?>([
       _storage.read(key: _backupAccessKey),
       _storage.read(key: _backupRefreshKey),
     ]);
     await Future.wait([
-      if (result[0] != null) saveAccessToken(result[0]!),
-      if (result[1] != null) saveRefreshToken(result[1]!),
-      _storage.delete(key: _backupAccessKey),
-      _storage.delete(key: _backupRefreshKey),
+      if (result[0] != null)
+        saveAccessToken(result[0]!)
+      else
+        deleteAccessToken(),
+      if (result[1] != null)
+        saveRefreshToken(result[1]!)
+      else
+        deleteRefreshToken(),
     ]);
+    await clearBackup();
   }
+
+  /// Discards any stored backup.
+  ///
+  /// Call this once an elevation has succeeded: the backup describes a session
+  /// that has been replaced, and keeping it lets a later failure resurrect it.
+  Future<void> clearBackup() => Future.wait([
+        _storage.delete(key: _backupAccessKey),
+        _storage.delete(key: _backupRefreshKey),
+      ]);
 
   // --- Document (for Cl@ve Movil) ---
 
@@ -89,8 +112,7 @@ class ClaveTokenStorage {
   Future<void> clearAll() => Future.wait([
         deleteAccessToken(),
         deleteRefreshToken(),
-        _storage.delete(key: _backupAccessKey),
-        _storage.delete(key: _backupRefreshKey),
+        clearBackup(),
         _storage.delete(key: _documentKey),
       ]);
 }

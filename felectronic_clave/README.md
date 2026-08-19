@@ -30,7 +30,39 @@ This package uses:
 - `flutter_secure_storage` for encrypted token persistence
 - `http` for Cl@ve Movil API calls
 
-Follow the [flutter_appauth setup guide](https://pub.dev/packages/flutter_appauth) for platform-specific configuration (redirect URI schemes, etc.).
+### Registering the redirect scheme
+
+The OAuth redirect comes back to your app through a custom URL scheme, and it
+has to be registered on **both** platforms. Registering it on only one is a
+quiet failure: the browser opens, the user authenticates, and the callback
+never arrives.
+
+**Android** — in `android/app/build.gradle.kts`:
+
+```kotlin
+manifestPlaceholders["appAuthRedirectScheme"] = "com.example.app"
+```
+
+**iOS/macOS** — in `ios/Runner/Info.plist`:
+
+```xml
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleTypeRole</key>
+    <string>Editor</string>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>com.example.app</string>
+    </array>
+  </dict>
+</array>
+```
+
+The scheme must match the one in `ClaveConfig.redirectUri` — for
+`com.example.app://login-callback`, the scheme is `com.example.app`. See the
+[flutter_appauth setup guide](https://pub.dev/packages/flutter_appauth) for the
+full detail.
 
 ## Configuration
 
@@ -43,7 +75,6 @@ final config = ClaveConfig(
   discoveryUrl: 'https://auth-api.redsara.es/auth/realms/.../.well-known/openid-configuration',
   clientId: 'my-client-id',
   redirectUri: 'com.example.app://login-callback',
-  clientSecret: 'my-client-secret',
   userInfoUrl: 'https://auth-api.redsara.es/auth/realms/.../protocol/openid-connect/userinfo',
   logoutUrl: 'https://auth-api.redsara.es/auth/realms/.../protocol/openid-connect/logout',
   defaultLoa: ClaveLoaLevel.low,
@@ -58,6 +89,19 @@ final config = ClaveConfig(
   claveMobileValidateUrl: 'https://...',
 );
 ```
+
+### `clientSecret` is optional, and should usually stay unset
+
+A mobile app cannot keep a secret: anyone can extract it from the distributed
+binary. RFC 8252 therefore says a native app should be registered as a *public*
+client and rely on PKCE, which `flutter_appauth` performs automatically.
+
+`clientSecret` remains available because some Cl@ve deployments register their
+clients as confidential and reject a request without one. If yours does, pass
+it — but know that it is not actually secret, and that the security of the flow
+rests on PKCE and on the registered redirect URI rather than on it.
+
+`ClaveConfigX.isValid` deliberately does not check it.
 
 Use the `ClaveConfigX` extension to validate your config:
 
@@ -263,6 +307,31 @@ All errors extend the sealed `ClaveError` class:
 | `ClaveIdleError` | Cl@ve Movil validation is still pending (keep polling) |
 | `ClaveUnknownError` | Unexpected error with a message |
 
+Two further exceptions come from the HTTP layer and are not `ClaveError`s;
+`ClaveRepository` maps them for you, but they are exported so a caller driving
+`ClaveHttpClient` directly can catch them:
+
+| Exception | Meaning |
+|-----------|---------|
+| `ClaveApiException` | the server answered with a non-2xx; carries status and body |
+| `ClaveNetworkException` | the server could not be reached, or the request timed out |
+
+### What the errors distinguish
+
+Three distinctions matter, and each was wrong in an earlier revision:
+
+- **Cancelled vs failed.** Every failure of the authorize-and-exchange call
+  arrives with the same platform code, because that code is the *method name*,
+  not a cause. Only `FlutterAppAuthUserCancelledException` means the user
+  cancelled; a wrong client secret or an unreachable IDP no longer masquerades
+  as one.
+- **Unreachable vs rejected.** A refresh that fails because the network is down
+  leaves the session intact — only a refusal from the server clears it. The
+  same holds for `validateToken`, where a 503 from userInfo used to log the
+  user out just as a 401 did.
+- **Logged out locally, regardless.** `logout()` clears the device's tokens
+  even when the server cannot be told.
+
 ```dart
 try {
   await repo.login(method: ClaveAuthMethod.clavePin);
@@ -274,6 +343,25 @@ try {
   print('Cl@ve error: ${e.message}');
 }
 ```
+
+## Status
+
+| | Covered by tests | Run against the real service |
+|---|---|---|
+| Document and contrast validation, JWT parsing | yes | n/a — pure functions |
+| Error mapping, token lifecycle, polling | yes, against fakes | **no** |
+| OAuth login, refresh, logout | yes, against fakes | **no** |
+| Cl@ve Movil create/validate | yes, against fakes | **no** |
+
+**No request from this package has reached the real Cl@ve service.** The tests
+drive fakes, and a fake written from the same reading as the client agrees with
+it whether or not that reading is right. Treat the wire-level details — the
+`AEAT` idp value on Movil validation, the header-vs-body placement of client
+credentials on the two Movil endpoints, and the `mode` of the notification
+payload — as unverified until a live call proves them.
+
+The example app exercises only the offline validators; it does not perform a
+login.
 
 ## Cleanup
 

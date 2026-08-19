@@ -77,7 +77,9 @@ class ClaveRepository {
 
       final accessToken = response.accessToken;
       if (accessToken == null) {
-        throw const ClaveAuthCancelledError();
+        throw const ClaveUnknownError(
+          'the token exchange succeeded but returned no access token',
+        );
       }
 
       await _storage.saveAccessToken(accessToken);
@@ -92,12 +94,66 @@ class ClaveRepository {
             ?.difference(DateTime.now())
             .inSeconds,
       );
+    } on FlutterAppAuthUserCancelledException {
+      throw const ClaveAuthCancelledError();
     } on PlatformException catch (e) {
-      if (e.code == 'authorize_and_exchange_code_failed') {
-        throw const ClaveAuthCancelledError();
-      }
-      throw ClaveUnknownError(e.message ?? e.code);
+      throw _mapAppAuthFailure(e);
     }
+  }
+
+  /// Turns an AppAuth platform failure into the closest [ClaveError].
+  ///
+  /// Cancellation is handled by its own catch clause; everything reaching here
+  /// is a genuine failure. An earlier revision matched on
+  /// `authorize_and_exchange_code_failed` and reported it as a cancellation —
+  /// but that code is the *method name*, carried by every failure of that
+  /// call, so a wrong client secret, an unreachable IDP and a rejected request
+  /// all looked to the caller exactly like the user pressing Back.
+  ClaveError _mapAppAuthFailure(PlatformException e) {
+    final details =
+        e is FlutterAppAuthPlatformException ? e.platformErrorDetails : null;
+
+    // A failure to fetch the discovery document, or any transport-level
+    // problem underneath it, means the IDP could not be reached.
+    final text = [
+      e.message ?? '',
+      details?.errorDescription ?? '',
+      details?.rootCauseDebugDescription ?? '',
+      details?.errorDebugDescription ?? '',
+      details?.domain ?? '',
+    ].join(' ').toLowerCase();
+
+    const unreachable = [
+      'network',
+      'discovery',
+      'nsurlerrordomain',
+      'unable to resolve host',
+      'connection',
+      'timed out',
+      'timeout',
+    ];
+    if (unreachable.any(text.contains)) {
+      return const ClaveDiscoveryFailedError();
+    }
+
+    // The authorization server answered and refused.
+    final oauthError = details?.error;
+    if (oauthError != null) {
+      if (oauthError == FlutterAppAuthOAuthError.invalidClient ||
+          oauthError == FlutterAppAuthOAuthError.unauthorizedClient ||
+          oauthError == FlutterAppAuthOAuthError.invalidGrant) {
+        return ClaveRefusedError(
+          details?.errorDescription ??
+              'the identity provider refused: '
+                  '$oauthError',
+        );
+      }
+      return ClaveUnknownError(
+        details?.errorDescription ?? oauthError,
+      );
+    }
+
+    return ClaveUnknownError(e.message ?? e.code);
   }
 
   /// Refreshes the access token using the stored refresh token.
@@ -124,12 +180,21 @@ class ClaveRepository {
         await _storage.saveAccessToken(newToken);
         return newToken;
       }
-    } on Object {
-      // Token refresh failed — clear tokens.
+      // A response with no token is not a rejection of the credential, so the
+      // session is left in place for the next attempt.
+      return null;
+    } on PlatformException catch (e) {
+      final failure = _mapAppAuthFailure(e);
+      if (failure is ClaveDiscoveryFailedError) {
+        // The IDP was unreachable. The refresh token has not been rejected,
+        // so throwing the session away here would log a user out for a tunnel
+        // or a flaky connection. Report the failure and keep the tokens.
+        throw failure;
+      }
+      // The server answered and refused the refresh token: it is spent.
+      await logout();
+      return null;
     }
-
-    await logout();
-    return null;
   }
 
   /// Returns the stored access token, or `null` if not set.
@@ -144,38 +209,55 @@ class ClaveRepository {
     final token = await refreshToken();
     if (token == null) return {};
 
-    final userInfo = await _httpClient.getUserInfo(
-      url: config.userInfoUrl,
-      accessToken: token,
-    );
-
-    if (userInfo.isEmpty) {
-      await logout();
+    try {
+      return await _httpClient.getUserInfo(
+        url: config.userInfoUrl,
+        accessToken: token,
+      );
+    } on ClaveNetworkException catch (e) {
+      // Unreachable is not invalid. Keep the session and let the caller retry.
+      throw ClaveDiscoveryFailedError(e.message);
+    } on ClaveApiException catch (e) {
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        // The token really was rejected.
+        await logout();
+        return {};
+      }
+      // 5xx and anything else is the server's problem, not the session's.
+      throw ClaveUnknownError('userInfo failed with ${e.statusCode}');
     }
-
-    return userInfo;
   }
 
   /// Extracts the NIF from the given JWT [token].
   String getNifFromToken(String token) => JwtParser.getNif(token);
 
   /// Logs out and clears all stored tokens.
+  ///
+  /// The local tokens are cleared even when the server cannot be told. A
+  /// logout that leaves the session on the device because the network was
+  /// down is not a logout — and since the remote call can now time out rather
+  /// than hang, that case is reachable.
   Future<void> logout() async {
     final access = await _storage.getAccessToken();
     final refresh = await _storage.getRefreshToken();
 
-    if (access != null || refresh != null) {
-      await _httpClient.logout(
-        url: config.logoutUrl,
-        clientId: config.clientId,
-        clientSecret: config.clientSecret,
-        accessToken: access ?? '',
-        refreshToken: refresh ?? '',
-      );
+    try {
+      if (access != null || refresh != null) {
+        await _httpClient.logout(
+          url: config.logoutUrl,
+          clientId: config.clientId,
+          clientSecret: config.clientSecret,
+          accessToken: access ?? '',
+          refreshToken: refresh ?? '',
+        );
+      }
+    } on Object {
+      // Best effort: the token may outlive the device's copy of it, but the
+      // device must not keep a session the user has ended.
+    } finally {
+      await _storage.deleteAccessToken();
+      await _storage.deleteRefreshToken();
     }
-
-    await _storage.deleteAccessToken();
-    await _storage.deleteRefreshToken();
   }
 
   // ---------------------------------------------------------------------------
@@ -297,7 +379,12 @@ class ClaveRepository {
     await _storage.backupTokens();
 
     try {
-      return await login(method: method, loa: loa);
+      final result = await login(method: method, loa: loa);
+      // The elevated session stands on its own now. Leaving the backup behind
+      // would let a later failed elevation restore this session's tokens long
+      // after it ended.
+      await _storage.clearBackup();
+      return result;
     } on Object {
       await _storage.restoreBackup();
       rethrow;
@@ -333,6 +420,9 @@ class ClaveRepository {
   }
 
   ClaveError _mapClaveApiError(Exception e) {
+    if (e is ClaveNetworkException) {
+      return ClaveDiscoveryFailedError(e.message);
+    }
     if (e is ClaveApiException) {
       switch (e.statusCode) {
         case 401:

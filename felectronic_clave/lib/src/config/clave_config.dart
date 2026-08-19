@@ -26,9 +26,9 @@ class ClaveConfig {
     required this.discoveryUrl,
     required this.clientId,
     required this.redirectUri,
-    required this.clientSecret,
     required this.userInfoUrl,
     required this.logoutUrl,
+    this.clientSecret,
     this.defaultLoa = ClaveLoaLevel.low,
     this.enabledMethods = const [
       ClaveAuthMethod.clavePin,
@@ -49,8 +49,18 @@ class ClaveConfig {
   /// OAuth 2.0 redirect URI (must match native app configuration).
   final String redirectUri;
 
-  /// OAuth 2.0 client secret.
-  final String clientSecret;
+  /// OAuth 2.0 client secret, when the client is registered as confidential.
+  ///
+  /// Leave this null for a public client. A mobile app cannot keep a secret —
+  /// anyone can extract it from the distributed binary — so RFC 8252 says a
+  /// native app should be registered as a public client and rely on PKCE,
+  /// which `flutter_appauth` performs automatically.
+  ///
+  /// It stays configurable because some Cl@ve deployments register their
+  /// clients as confidential and reject a request without it. If yours does,
+  /// know that the secret is not actually secret, and that the security of the
+  /// flow rests on PKCE and the redirect URI rather than on it.
+  final String? clientSecret;
 
   /// UserInfo endpoint for token validation.
   final String userInfoUrl;

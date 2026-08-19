@@ -28,7 +28,11 @@ class ClaveMobilePoller {
   ClaveMobilePoller(this._repository);
 
   final ClaveRepository _repository;
-  bool _cancelled = false;
+
+  /// One flag per in-flight [poll]. An earlier revision kept a single flag and
+  /// reset it at the top of [poll], so starting a second poll silently
+  /// un-cancelled the first and [cancel] could not stop either reliably.
+  final Set<_PollToken> _active = {};
 
   /// Polls for Cl@ve Movil validation.
   ///
@@ -43,42 +47,59 @@ class ClaveMobilePoller {
     Duration interval = const Duration(seconds: 5),
     Duration timeout = const Duration(minutes: 5),
   }) async* {
-    _cancelled = false;
-    final start = DateTime.now();
+    final token = _PollToken();
+    _active.add(token);
+    try {
+      final start = DateTime.now();
 
-    // Initial wait before first poll
-    await Future<void>.delayed(initialDelay);
-    if (_cancelled) return;
+      // Initial wait before the first poll: the user has to reach for their
+      // phone and approve, so an immediate request is always idle.
+      await Future<void>.delayed(initialDelay);
+      if (token.cancelled) return;
 
-    while (!_cancelled) {
-      final elapsed = DateTime.now().difference(start);
-      if (elapsed >= timeout) {
-        yield const ClavePollError(ClaveSessionExpiredError());
-        return;
+      while (!token.cancelled) {
+        final elapsed = DateTime.now().difference(start);
+        if (elapsed >= timeout) {
+          yield const ClavePollError(ClaveSessionExpiredError());
+          return;
+        }
+
+        try {
+          final result = await _repository.validateNotificationCode(
+            session: session,
+          );
+          yield ClavePollSuccess(result);
+          return;
+        } on ClaveIdleError {
+          yield ClavePollWaiting(elapsed.inSeconds);
+        } on ClaveError catch (e) {
+          if (token.cancelled) return;
+          yield ClavePollError(e);
+          return;
+        }
+
+        if (token.cancelled) return;
+        await Future<void>.delayed(interval);
       }
-
-      try {
-        final result = await _repository.validateNotificationCode(
-          session: session,
-        );
-        yield ClavePollSuccess(result);
-        return;
-      } on ClaveIdleError {
-        yield ClavePollWaiting(elapsed.inSeconds);
-      } on ClaveError catch (e) {
-        if (_cancelled) return;
-        yield ClavePollError(e);
-        return;
-      }
-
-      if (_cancelled) return;
-      await Future<void>.delayed(interval);
-      if (_cancelled) return;
+    } finally {
+      _active.remove(token);
     }
   }
 
-  /// Cancels the polling loop.
-  void cancel() => _cancelled = true;
+  /// Cancels every poll started by this poller.
+  ///
+  /// The poll timeout is only checked between requests, so a poll can outlive
+  /// it by at most one request. `ClaveHttpClient` bounds that.
+  void cancel() {
+    for (final token in _active) {
+      token.cancelled = true;
+    }
+  }
+}
+
+/// Cancellation flag scoped to a single [ClaveMobilePoller.poll] call.
+class _PollToken {
+  bool cancelled = false;
 }
 
 /// Status emitted by [ClaveMobilePoller.poll].

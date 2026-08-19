@@ -54,7 +54,11 @@ final class ClaveSessionExpiredError extends ClaveError {
 /// {@endtemplate}
 final class ClaveRefusedError extends ClaveError {
   /// {@macro clave_refused_error}
-  const ClaveRefusedError() : super('Authentication was refused.');
+  ///
+  /// [message] carries the identity provider's own reason when it gave one;
+  /// it falls back to a generic description otherwise.
+  const ClaveRefusedError([String? message])
+      : super(message ?? 'Authentication was refused.');
 }
 
 /// {@template clave_discovery_failed_error}
@@ -62,9 +66,12 @@ final class ClaveRefusedError extends ClaveError {
 /// {@endtemplate}
 final class ClaveDiscoveryFailedError extends ClaveError {
   /// {@macro clave_discovery_failed_error}
-  const ClaveDiscoveryFailedError()
-      : super('Could not reach the identity provider. '
-            'Check your network connection.');
+  const ClaveDiscoveryFailedError([String? message])
+      : super(
+          message ??
+              'Could not reach the identity provider. '
+                  'Check your network connection.',
+        );
 }
 
 /// {@template clave_idle_error}

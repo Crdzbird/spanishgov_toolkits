@@ -29,6 +29,7 @@ export 'src/models/clave_auth_method.dart';
 export 'src/models/clave_auth_result.dart';
 export 'src/models/clave_loa_level.dart';
 export 'src/models/clave_mobile_session.dart';
+export 'src/network/clave_http_client.dart';
 export 'src/storage/clave_token_storage.dart';
 export 'src/utils/clave_extensions.dart';
 export 'src/utils/clave_mobile_poller.dart';

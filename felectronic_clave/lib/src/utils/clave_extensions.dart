@@ -132,11 +132,14 @@ extension ClaveConfigX on ClaveConfig {
       claveMobileValidateUrl!.isNotEmpty;
 
   /// Whether all required fields are non-empty.
+  ///
+  /// [ClaveConfig.clientSecret] is deliberately not checked: a public client
+  /// has none, and requiring one would report a correctly configured native
+  /// app as invalid.
   bool get isValid =>
       discoveryUrl.isNotEmpty &&
       clientId.isNotEmpty &&
       redirectUri.isNotEmpty &&
-      clientSecret.isNotEmpty &&
       userInfoUrl.isNotEmpty &&
       logoutUrl.isNotEmpty;
 }
