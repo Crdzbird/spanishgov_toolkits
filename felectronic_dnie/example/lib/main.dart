@@ -560,12 +560,29 @@ class _CertificatesTabState extends State<_CertificatesTab>
     return l.join('\n');
   }
 
+  /// Holds the password field's text.
+  ///
+  /// Owned by the State and disposed with it, NOT disposed when the dialog
+  /// closes. Disposing it in a `finally` right after `showDialog` returns
+  /// crashes: the future completes when Navigator.pop is called, while the
+  /// dialog is still animating out and its TextField still depends on the
+  /// controller -- Flutter then asserts `_dependents.isEmpty`.
+  ///
+  /// The text is cleared after each use instead, so the password does not
+  /// linger in memory any longer than the import needs it.
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   /// Asks for the PKCS#12 password.
   ///
-  /// Returns null if the user cancels. The value is used once and not stored;
-  /// the controller is disposed immediately after.
+  /// Returns null if the user cancels.
   Future<String?> _askPassword() async {
-    final controller = TextEditingController();
+    final controller = _passwordController..clear();
     try {
       return await showDialog<String>(
         context: context,
@@ -593,7 +610,9 @@ class _CertificatesTabState extends State<_CertificatesTab>
         ),
       );
     } finally {
-      controller.dispose();
+      // Clear, do not dispose: the dialog is still dismissing, and the State
+      // owns this controller.
+      controller.clear();
     }
   }
 
@@ -606,15 +625,27 @@ class _CertificatesTabState extends State<_CertificatesTab>
   Future<void> _importCertificate() async {
     setState(() => _status = 'Choosing a file...');
 
-    final picked = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['p12', 'pfx'],
-      withData: true,
-    );
+    // FileType.any, not a .p12/.pfx filter.
+    //
+    // Filtering by extension makes file_picker map them to UTTypes, and iOS
+    // has no dependable public type for PKCS#12 -- the picker then shows the
+    // folder as empty even when the file is sitting in it. Showing everything
+    // and checking the name afterwards is the difference between a working
+    // import and one that looks like the file is missing.
+    final picked = await FilePicker.platform.pickFiles(withData: true);
     final file = picked?.files.singleOrNull;
     final bytes = file?.bytes;
     if (bytes == null) {
       setState(() => _status = 'Import cancelled.');
+      return;
+    }
+
+    final name = file!.name.toLowerCase();
+    if (!name.endsWith('.p12') && !name.endsWith('.pfx')) {
+      setState(() {
+        _status = 'Not a PKCS#12 file.';
+        _result = 'Pick a .p12 or .pfx. Chosen: ${file.name}';
+      });
       return;
     }
 
@@ -629,7 +660,7 @@ class _CertificatesTabState extends State<_CertificatesTab>
     await certs.importCertificate(
       bytes,
       password: password.isEmpty ? null : password,
-      alias: file!.name,
+      alias: file.name,
     );
 
     final all = await certs.getAllCertificates();
@@ -700,25 +731,17 @@ class _CertificatesTabState extends State<_CertificatesTab>
           busy: _busy,
           icon: Icons.touch_app,
           label: 'Select Certificate',
-          subtitle: 'Picks the first imported identity (iOS has no picker)',
+          subtitle: 'Choose from the installed certificates',
           onPressed: () => _run(() async {
-            setState(() => _status = 'Opening picker...');
-            final c = await certs.selectDefaultCertificate();
+            final session = await certs.showCertificatePicker(context);
+            if (!mounted) return;
             setState(() {
-              if (c != null) {
-                _status = 'Selected: ${c.displayName}';
-                _result = _fmt(c);
+              if (session == null) {
+                _status = 'No certificate chosen.';
+                _result = '';
               } else {
-                _status = 'No certificate available.';
-                _result =
-                    "This app's keychain is empty, so there is nothing "
-                    'to select.\n\n'
-                    'A certificate installed as a configuration profile '
-                    '(Settings > General > VPN & Device Management) does '
-                    'NOT count: iOS keeps it in the system keychain, and '
-                    'an app cannot read identities from there. That is a '
-                    'platform rule, not a limitation of this plugin.\n\n'
-                    'Import the .p12 you installed the profile from.';
+                _status = 'Selected: ${session.certificate.displayName}';
+                _result = _fmt(session.certificate);
               }
             });
           }),
