@@ -1,2 +1,11 @@
 .build/
 .swiftpm/
+# The j2objc runtime, built by Tools/build_jre_emul.sh.
+#
+# ~194 MB of static archives and 1,573 headers. Not committed: it is a build
+# artifact, it is reproducible from the script, and Google publishes no
+# prebuilt distribution to pin against instead.
+#
+# The pod cannot link without it. Run:
+#     felectronic_dnie_ios/Tools/build_jre_emul.sh
+ios/Frameworks/JRE.xcframework/

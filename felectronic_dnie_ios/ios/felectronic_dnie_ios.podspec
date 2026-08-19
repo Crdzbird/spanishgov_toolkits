@@ -141,48 +141,117 @@ iOS implementation for reading and signing with Spanish electronic DNIe
   s.compiler_flags = '-fno-objc-arc'
 
   # ---------------------------------------------------------------------
-  # j2objc JRE runtime — REQUIRED for this pod to link. Currently missing.
+  # j2objc JRE runtime
   # ---------------------------------------------------------------------
   #
-  # Every source file in this pod compiles (1,769 of them), but linking fails
-  # with ~460 undefined symbols: IOSClass_*, IOSArray_*, JavaLang*, JavaUtil*,
-  # JavaIo*, JavaMath*, JavaNet*.
+  # The 1,305 transpiled sources under jmulticard-objc/ are j2objc output, and
+  # j2objc emits code against a runtime it does not generate: IOSClass_*,
+  # IOSArray_*, and the whole emulated JRE (JavaMathBigInteger, JavaUtilHashtable,
+  # JavaSecuritySecureRandom and ~195 more). Without it the pod compiles and
+  # then fails to link.
   #
-  # Those are j2objc's JRE emulation. This repository ships the transpiled
-  # APPLICATION code (1,305 .m files under jmulticard-objc/) and 1,040 JRE
-  # HEADERS under j2objc/ — but no JRE implementations, because j2objc ships
-  # them as a prebuilt static library instead. Android does the equivalent
-  # correctly: felectronic_dnie_android/android/libs/jmulticard-3.0.0.jar is
-  # vendored, which is why Android links and builds.
+  # JRE.xcframework is that runtime, built from j2objc at tag 3.0.0. The version
+  # is not a guess: diffing the vendored J2ObjC_common.h against upstream tags
+  # gives 30 changed lines for 3.0.0 versus 52-75 for 2.6-3.1, and all 30 are
+  # cosmetic (macro formatting, `(void)` vs `()`). Same macros, same symbols.
   #
-  # To finish: drop libjre_emul.a into felectronic_dnie_ios/Libraries/ and
-  # uncomment the two lines below.
+  # It carries ios-arm64 and ios-arm64_x86_64-simulator only. Intel simulators are not
+  # covered; add `simulator` to ENV_J2OBJC_ARCHS and rebuild if that is needed.
   #
-  #   s.vendored_libraries = 'felectronic_dnie_ios/Libraries/libjre_emul.a'
-  #   s.libraries          = 'z', 'icucore'
+  # To rebuild (see Tools/build_jre_emul.sh for the script):
+  #   JDK 11 exactly. The translator crashes on 17 with a NullPointerException
+  #   from javac internals it was not written against, and JAVA_HOME must be the
+  #   real JDK home -- Homebrew's opt/openjdk@11 symlink lacks lib/jrt-fs.jar.
   #
-  # Sourcing it:
-  #   * Prefer the exact build that produced this tree — the upstream
-  #     DNIe/Portafirmas iOS project. The generated code is ABI-coupled to the
-  #     j2objc version that emitted it, and these headers carry no version
-  #     marker (jmulticard-3.0.0 is the Java library's version, not j2objc's).
-  #     A mismatched runtime can fail to link, or link and misbehave at run
-  #     time inside signing code.
-  #   * Google no longer publishes prebuilt archives: the release assets for
-  #     tags 3.1 / 3.0.0 / 2.8 / 2.7 / 2.6 are gone (404). Building j2objc from
-  #     source is possible but yields an unverified version match.
+  s.vendored_frameworks = 'Frameworks/JRE.xcframework'
   #
-  # The library must include the simulator slice (or be an .xcframework) for
-  # simulator builds; use s.vendored_frameworks instead of s.vendored_libraries
-  # if it arrives as an .xcframework.
-  #
-  # Once linking succeeds, restore the ios end-to-end job removed from
-  # .github/workflows/felectronic_dnie.yaml.
+  # 'jre_emul' is listed here as well as coming from the xcframework. CocoaPods
+  # adds -ljre_emul to this pod's own link flags, but does not propagate it to
+  # the app target, which is where the transpiled code's symbols finally have to
+  # resolve -- the pod builds static, so its undefined externals are the app's
+  # problem. Listing it in s.libraries puts the flag in both, and both already
+  # get the xcframework's directory on LIBRARY_SEARCH_PATHS. Without it the app
+  # link fails with ~100 undefined JavaLang/JavaIo/JavaNet symbols while the
+  # pod itself links cleanly.
+  # iconv: the emulated JRE's charset conversion calls iconv_open/iconvctl.
+  # z and icucore are j2objc's other documented system dependencies.
+  s.libraries           = 'z', 'icucore', 'iconv'
 
-  s.dependency 'Flutter'
+  # The runtime is force-loaded rather than linked with -l.
+  #
+  # A static archive only yields the members needed at the point it appears on
+  # the link line. CocoaPods sorts -l flags alphabetically, so -ljre_emul lands
+  # before -framework felectronic_dnie_ios -- nothing references the runtime
+  # yet, the linker keeps nothing, and the app fails with ~100 undefined
+  # JavaLang/JavaIo/JavaNet symbols even though the archive is present, on the
+  # search path, and demonstrably defines every one of them.
+  #
+  # The path is PODS_XCFRAMEWORKS_BUILD_DIR, which CocoaPods defines for the app
+  # target as well as this pod, and which its own copy phase fills with the
+  # slice matching the SDK being built. That avoids naming ios-arm64 versus
+  # ios-arm64_x86_64-simulator here -- both are arm64 and cannot be lipo'd together,
+  # which is what the xcframework exists to solve.
+  #
+  # Do not use PODS_TARGET_SRCROOT: it is pod-scoped, expands to nothing in the
+  # app target, and the resulting force_load path silently fails to resolve.
+  # Loaded from the source tree, NOT from PODS_XCFRAMEWORKS_BUILD_DIR.
+  #
+  # CocoaPods' [CP] Copy XCFrameworks phase populates that directory, but it
+  # does not reliably run before the app links: a build immediately after
+  # `pod install` fails with ~100 undefined symbols, and the slice appears in
+  # the intermediates only afterwards. Pointing at the vendored xcframework
+  # directly removes the ordering dependency entirely.
+  #
+  # PODS_ROOT is defined for the app target; PODS_TARGET_SRCROOT is not. The
+  # slice is chosen by SDK because device and simulator are both arm64 and
+  # cannot be merged with lipo.
+  s.user_target_xcconfig = {
+    # Same reason as the header paths: the umbrella pulls in transpiled
+    # headers that are not themselves module members, and the app builds this
+    # module when it imports the plugin. The pod already sets this for its own
+    # compilation; the app needs it too or the module fails to build with
+    # "Include of non-modular header inside framework module".
+    'CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES' => 'YES',
+    # The app compiles this framework's module when it imports the plugin, and
+    # the umbrella exposes CustomApduConnection.h, which #includes headers from
+    # the transpiled tree by their source-relative path. Those headers are
+    # deliberately not copied into the framework (see the note at the top), so
+    # the app needs the same roots the pod uses -- expressed with PODS_ROOT,
+    # because PODS_TARGET_SRCROOT is pod-scoped and expands to nothing here.
+    #
+    # Without these the link now succeeds and the build then fails with
+    # "'es/gob/jmulticard/connection/AbstractApduConnectionIso7816.h' file not
+    # found" followed by "Could not build module 'felectronic_dnie_ios'".
+    'HEADER_SEARCH_PATHS' => [
+      '$(inherited)',
+      '"$(PODS_ROOT)/../.symlinks/plugins/felectronic_dnie_ios/ios/felectronic_dnie_ios/Sources/felectronic_dnie_ios"',
+      '"$(PODS_ROOT)/../.symlinks/plugins/felectronic_dnie_ios/ios/felectronic_dnie_ios/Sources/felectronic_dnie_ios/j2objc"',
+      '"$(PODS_ROOT)/../.symlinks/plugins/felectronic_dnie_ios/ios/felectronic_dnie_ios/Sources/felectronic_dnie_ios/jmulticard-objc"',
+      '"$(PODS_ROOT)/../.symlinks/plugins/felectronic_dnie_ios/ios/felectronic_dnie_ios/Sources/felectronic_dnie_ios/jmulticard-objc/afirma"',
+      '"$(PODS_ROOT)/../.symlinks/plugins/felectronic_dnie_ios/ios/felectronic_dnie_ios/Sources/felectronic_dnie_ios/DNIe"',
+      '"$(PODS_ROOT)/../.symlinks/plugins/felectronic_dnie_ios/ios/felectronic_dnie_ios/Sources/felectronic_dnie_ios/XMLKit"',
+    ].join(' '),
+    'OTHER_LDFLAGS[sdk=iphoneos*]' =>
+      '$(inherited) -force_load "$(PODS_ROOT)/../.symlinks/plugins/felectronic_dnie_ios/ios/Frameworks/JRE.xcframework/ios-arm64/libjre_emul.a"',
+    'OTHER_LDFLAGS[sdk=iphonesimulator*]' =>
+      '$(inherited) -force_load "$(PODS_ROOT)/../.symlinks/plugins/felectronic_dnie_ios/ios/Frameworks/JRE.xcframework/ios-arm64_x86_64-simulator/libjre_emul.a"',
+  }
+
+s.dependency 'Flutter'
   s.platform         = :ios, '15.0'
 
   s.pod_target_xcconfig = {
+    # The pod links before the app and needs the runtime too: with
+    # use_frameworks! this pod is its own framework, and the undefined
+    # symbols reported against Pods.xcodeproj are its link, not Runner's.
+    # -ljre_emul from the vendored xcframework resolves through
+    # PODS_XCFRAMEWORKS_BUILD_DIR, which the copy phase has not
+    # necessarily filled yet; force-loading from the source tree removes
+    # that ordering dependency.
+    'OTHER_LDFLAGS[sdk=iphoneos*]' =>
+      '$(inherited) -force_load "$(PODS_ROOT)/../.symlinks/plugins/felectronic_dnie_ios/ios/Frameworks/JRE.xcframework/ios-arm64/libjre_emul.a"',
+    'OTHER_LDFLAGS[sdk=iphonesimulator*]' =>
+      '$(inherited) -force_load "$(PODS_ROOT)/../.symlinks/plugins/felectronic_dnie_ios/ios/Frameworks/JRE.xcframework/ios-arm64_x86_64-simulator/libjre_emul.a"',
     'DEFINES_MODULE' => 'YES',
     'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386',
     # No SWIFT_OBJC_BRIDGING_HEADER: bridging headers are unsupported in
