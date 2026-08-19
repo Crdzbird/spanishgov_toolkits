@@ -22,18 +22,49 @@ class KeychainCertificateManager {
 
     /// Imports a PKCS#12 file into the Keychain.
     ///
-    /// If a certificate with the same identity already exists,
-    /// it is replaced silently (matching Portafirmas behavior).
+    /// ## Why this does not simply add the identity
+    ///
+    /// On iOS `SecPKCS12Import` **already inserts** the identity into the
+    /// Keychain as a side effect. An earlier version of this method then
+    /// deleted by identity reference and re-added, which had two consequences:
+    /// the delete's status was discarded, and when it did not remove the item
+    /// the following `SecItemAdd` returned `errSecDuplicateItem` — reported to
+    /// the caller as "already exists" on a *first* import, which is both wrong
+    /// and impossible to act on.
+    ///
+    /// So the import's own insert is treated as the primary path. The identity
+    /// is read back afterwards, and the protection class and label are applied
+    /// with `SecItemUpdate` rather than by re-adding. `SecItemAdd` is kept only
+    /// as a fallback for a platform where the side-effect insert does not
+    /// happen.
+    ///
+    /// Whether the certificate was *already* present is decided by comparing
+    /// the Keychain before and after, not by interpreting an add failure.
     ///
     /// - Parameters:
     ///   - data: The raw PKCS#12 bytes.
-    ///   - password: The password protecting the .p12 file.
-    ///   - alias: An optional label to assign to the imported identity.
+    ///   - password: The password protecting the file, or nil when it has none.
+    ///     Note that nil and `""` are different: an empty passphrase is a
+    ///     passphrase.
+    ///   - alias: An optional label to assign to the imported certificate.
+    /// - Returns: The imported certificate, read back from the Keychain.
     /// - Throws: ``CertificateFailure``.
-    func importPKCS12(data: Data, password: String?, alias: String?) throws {
-        let options: [String: Any] = [
-            kSecImportExportPassphrase as String: password ?? "",
-        ]
+    @discardableResult
+    func importPKCS12(
+        data: Data,
+        password: String?,
+        alias: String?
+    ) throws -> CertificateInfo {
+        let existingSerials = Set(
+            getAllIdentities().compactMap {
+                getCertificateInfo(identity: $0.0)?.serialNumber
+            }
+        )
+
+        var options: [String: Any] = [:]
+        if let password {
+            options[kSecImportExportPassphrase as String] = password
+        }
 
         var items: CFArray?
         let status = SecPKCS12Import(
@@ -41,59 +72,113 @@ class KeychainCertificateManager {
             options as CFDictionary,
             &items
         )
-
         guard status == errSecSuccess,
               let importedItems = items as? [[String: Any]],
               let firstItem = importedItems.first,
-              let identity = firstItem[kSecImportItemIdentity as String]
+              let identityRef = firstItem[kSecImportItemIdentity as String]
         else {
-            if status == errSecAuthFailed || status == -25293 {
+            if status == errSecAuthFailed {
                 throw CertificateFailure.incorrectPassword
             }
             throw CertificateFailure.importFailed(status)
         }
 
-        // Remove existing identity first (Portafirmas pattern: replace silently)
-        var deleteQuery: [String: Any] = [
-            kSecValueRef as String: identity,
-        ]
-        addAccessGroup(to: &deleteQuery)
-        SecItemDelete(deleteQuery as CFDictionary)
+        // swiftlint:disable:next force_cast
+        let identity = identityRef as! SecIdentity
 
-        // Store identity in Keychain
-        var addQuery: [String: Any] = [
-            kSecValueRef as String: identity,
-            // Private signing keys must not leave this device. The default
-            // protection class is backed up by iTunes/iCloud and restorable
-            // onto a different device; `…ThisDeviceOnly` is excluded from
-            // backups entirely. `AfterFirstUnlock` (rather than `WhenUnlocked`)
-            // keeps signing working from a background launch after a reboot.
-            //
-            // VERIFY on device: that this attribute is honoured for the
-            // *private key* when the item is added by identity reference.
-            // `SecPKCS12Import` already inserts the key into the Keychain as a
-            // side effect on iOS, so if the key keeps the protection class it
-            // was imported with, tightening it needs an explicit
-            // `SecItemUpdate` on `kSecClassKey` instead. Confirm by reading
-            // back `kSecAttrAccessible` for the key after an import.
-            kSecAttrAccessible as String:
-                kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-        ]
-        addAccessGroup(to: &addQuery)
-
-        if let alias = alias, !alias.isEmpty {
-            addQuery[kSecAttrLabel as String] = alias
+        guard let info = getCertificateInfo(identity: identity) else {
+            throw CertificateFailure.importFailed(errSecDecode)
         }
 
-        let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
-
-        if addStatus == errSecDuplicateItem || addStatus == -25299 {
+        if existingSerials.contains(info.serialNumber) {
             throw CertificateFailure.alreadyExists
         }
 
-        guard addStatus == errSecSuccess else {
-            throw CertificateFailure.storeFailed(addStatus)
+        // The side-effect insert is the normal case; add only if it did not
+        // happen. A duplicate here means the item is present, which is the
+        // outcome wanted either way.
+        if findIdentity(serialNumber: info.serialNumber) == nil {
+            var addQuery: [String: Any] = [kSecValueRef as String: identity]
+            addAccessGroup(to: &addQuery)
+            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+            guard addStatus == errSecSuccess || addStatus == errSecDuplicateItem
+            else {
+                throw CertificateFailure.storeFailed(addStatus)
+            }
         }
+
+        applyProtection(to: identity, alias: alias)
+
+        // An import that reports success and stores nothing is a real failure,
+        // not an empty result for the caller to discover later.
+        guard findIdentity(serialNumber: info.serialNumber) != nil else {
+            throw CertificateFailure.storeFailed(errSecItemNotFound)
+        }
+        return info
+    }
+
+    /// Applies the protection class to the private key and the label to the
+    /// certificate, on the items the Keychain actually holds.
+    ///
+    /// Both are best-effort and deliberately do not throw: the certificate is
+    /// imported and usable either way, and failing the whole import because a
+    /// label did not stick would be worse than the label not sticking.
+    ///
+    /// The protection class is set here rather than on an add because
+    /// `SecPKCS12Import` inserts the key with its own default, and an add that
+    /// hits an existing item leaves that default in place. Private signing keys
+    /// must not leave the device: `…ThisDeviceOnly` is excluded from backups,
+    /// where the default class is restorable onto another device.
+    /// `AfterFirstUnlock` rather than `WhenUnlocked` keeps signing working from
+    /// a background launch after a reboot.
+    private func applyProtection(to identity: SecIdentity, alias: String?) {
+        var privateKey: SecKey?
+        if SecIdentityCopyPrivateKey(identity, &privateKey) == errSecSuccess,
+           let key = privateKey {
+            var keyQuery: [String: Any] = [
+                kSecClass as String: kSecClassKey,
+                kSecValueRef as String: key,
+            ]
+            addAccessGroup(to: &keyQuery)
+            SecItemUpdate(
+                keyQuery as CFDictionary,
+                [
+                    kSecAttrAccessible as String:
+                        kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+                ] as CFDictionary
+            )
+        }
+
+        guard let alias, !alias.isEmpty else { return }
+        var certificate: SecCertificate?
+        guard SecIdentityCopyCertificate(identity, &certificate) == errSecSuccess,
+              let cert = certificate
+        else {
+            return
+        }
+        var certQuery: [String: Any] = [
+            kSecClass as String: kSecClassCertificate,
+            kSecValueRef as String: cert,
+        ]
+        addAccessGroup(to: &certQuery)
+        SecItemUpdate(
+            certQuery as CFDictionary,
+            [kSecAttrLabel as String: alias] as CFDictionary
+        )
+    }
+
+    /// Finds an identity by its canonical serial number.
+    ///
+    /// The serial is the Keychain lookup key used across this plugin, and is
+    /// the only identifier guaranteed to survive an import — a label may not
+    /// attach to an identity add.
+    func findIdentity(serialNumber: String) -> SecIdentity? {
+        let wanted = Self.canonicalSerial(serialNumber)
+        for (identity, _) in getAllIdentities()
+        where getCertificateInfo(identity: identity)?.serialNumber == wanted {
+            return identity
+        }
+        return nil
     }
 
     // MARK: - Query

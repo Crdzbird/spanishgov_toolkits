@@ -38,6 +38,7 @@ export 'package:felectronic_triphase/felectronic_triphase.dart'
         TriphaseTransport,
         TriphaseTransportException;
 export 'src/advanced_signature.dart';
+export 'src/apple_certificates.dart';
 export 'src/certificate_session.dart';
 
 FelectronicCertificatesPlatform get _platform =>
