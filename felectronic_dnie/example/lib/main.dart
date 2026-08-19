@@ -5,6 +5,7 @@ import 'package:felectronic_certificates/felectronic_certificates.dart'
     as certs;
 import 'package:felectronic_clave/felectronic_clave.dart';
 import 'package:felectronic_dnie/felectronic_dnie.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 void main() => runApp(const ExampleApp());
@@ -558,6 +559,85 @@ class _CertificatesTabState extends State<_CertificatesTab>
     return l.join('\n');
   }
 
+  /// Asks for the PKCS#12 password.
+  ///
+  /// Returns null if the user cancels. The value is used once and not stored;
+  /// the controller is disposed immediately after.
+  Future<String?> _askPassword() async {
+    final controller = TextEditingController();
+    try {
+      return await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('PKCS#12 password'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            obscureText: true,
+            decoration: const InputDecoration(
+              hintText: 'Leave empty if the file is not encrypted',
+            ),
+            onSubmitted: (v) => Navigator.of(context).pop(v),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(controller.text),
+              child: const Text('Import'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      controller.dispose();
+    }
+  }
+
+  /// Imports a PKCS#12 into the app's own keychain.
+  ///
+  /// This is the step that makes the other buttons work. On iOS an app can
+  /// only see identities in its own keychain -- a certificate installed as a
+  /// configuration profile lives in the system keychain and is not reachable
+  /// from here, so importing is the only way to get one in.
+  Future<void> _importCertificate() async {
+    setState(() => _status = 'Choosing a file...');
+
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['p12', 'pfx'],
+      withData: true,
+    );
+    final file = picked?.files.singleOrNull;
+    final bytes = file?.bytes;
+    if (bytes == null) {
+      setState(() => _status = 'Import cancelled.');
+      return;
+    }
+
+    if (!mounted) return;
+    final password = await _askPassword();
+    if (password == null) {
+      setState(() => _status = 'Import cancelled.');
+      return;
+    }
+
+    setState(() => _status = 'Importing...');
+    await certs.importCertificate(
+      bytes,
+      password: password.isEmpty ? null : password,
+      alias: file!.name,
+    );
+
+    final all = await certs.getAllCertificates();
+    setState(() {
+      _status = 'Imported. ${all.length} certificate(s) now available.';
+      _result = all.map(_fmt).join('\n\n');
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -565,6 +645,13 @@ class _CertificatesTabState extends State<_CertificatesTab>
       padding: const EdgeInsets.all(24),
       children: [
         const _Section(title: 'Certificate Management'),
+        _Btn(
+          busy: _busy,
+          icon: Icons.file_upload,
+          label: 'Import Certificate (.p12 / .pfx)',
+          subtitle: 'Required before the other actions work',
+          onPressed: () => _run(_importCertificate),
+        ),
         _Btn(
           busy: _busy,
           icon: Icons.list,
@@ -576,8 +663,11 @@ class _CertificatesTabState extends State<_CertificatesTab>
             setState(() {
               _status = '${l.length} certificate(s).';
               _result = l.isEmpty
-                  ? 'No certificates found.\n'
-                        'Use "Select" to pick one.'
+                  ? "No certificates in this app's keychain.\n\n"
+                        'Import a .p12 or .pfx first.\n\n'
+                        'On iOS a certificate installed as a configuration '
+                        'profile lives in the system keychain and cannot be '
+                        'read by an app -- importing is the only way.'
                   : l.map(_fmt).join('\n\n');
             });
           }),
@@ -586,7 +676,7 @@ class _CertificatesTabState extends State<_CertificatesTab>
           busy: _busy,
           icon: Icons.touch_app,
           label: 'Select Certificate',
-          subtitle: 'Opens system picker',
+          subtitle: 'Picks the first imported identity (iOS has no picker)',
           onPressed: () => _run(() async {
             setState(() => _status = 'Opening picker...');
             final c = await certs.selectDefaultCertificate();
@@ -595,7 +685,16 @@ class _CertificatesTabState extends State<_CertificatesTab>
                 _status = 'Selected: ${c.displayName}';
                 _result = _fmt(c);
               } else {
-                _status = 'No certificate selected.';
+                _status = 'No certificate available.';
+                _result =
+                    "This app's keychain is empty, so there is nothing "
+                    'to select.\n\n'
+                    'A certificate installed as a configuration profile '
+                    '(Settings > General > VPN & Device Management) does '
+                    'NOT count: iOS keeps it in the system keychain, and '
+                    'an app cannot read identities from there. That is a '
+                    'platform rule, not a limitation of this plugin.\n\n'
+                    'Import the .p12 you installed the profile from.';
               }
             });
           }),

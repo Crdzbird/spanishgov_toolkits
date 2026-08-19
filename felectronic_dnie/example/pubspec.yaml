@@ -13,6 +13,9 @@ dependencies:
   felectronic_certificates: ^1.0.0
   felectronic_clave: ^1.0.0
   felectronic_dnie: ^1.0.0
+  # Example-only: lets the demo pick a PKCS#12 from the device so a
+  # certificate can actually be imported into the app's keychain.
+  file_picker: ^8.1.0
   flutter:
     sdk: flutter
 
