@@ -7,6 +7,7 @@ import 'package:felectronic_clave/felectronic_clave.dart';
 import 'package:felectronic_dnie/felectronic_dnie.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 void main() => runApp(const ExampleApp());
 
@@ -645,6 +646,29 @@ class _CertificatesTabState extends State<_CertificatesTab>
       padding: const EdgeInsets.all(24),
       children: [
         const _Section(title: 'Certificate Management'),
+        _Btn(
+          busy: _busy,
+          icon: Icons.science,
+          label: 'Import bundled test certificate',
+          subtitle: 'Self-signed, password "test" - proves the import path',
+          filled: false,
+          onPressed: () => _run(() async {
+            setState(() => _status = 'Importing bundled test cert...');
+            final data = await rootBundle.load('assets/test.p12');
+            final session = await certs.AppleCertificates.importAndSelect(
+              data.buffer.asUint8List(),
+              password: 'test',
+              alias: 'test.p12',
+            );
+            final all = await certs.getAllCertificates();
+            setState(() {
+              _status = 'Imported. ${all.length} certificate(s).';
+              _result =
+                  'Selected: ${session.certificate.displayName}\n\n'
+                  '${all.map(_fmt).join('\n\n')}';
+            });
+          }),
+        ),
         _Btn(
           busy: _busy,
           icon: Icons.file_upload,
