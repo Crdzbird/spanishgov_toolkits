@@ -64,11 +64,13 @@ class _FakeAppAuth implements FlutterAppAuth {
   Exception? tokenThrows;
   AuthorizationTokenResponse? authorizeReturns;
   TokenResponse? tokenReturns;
+  AuthorizationTokenRequest? lastRequest;
 
   @override
   Future<AuthorizationTokenResponse> authorizeAndExchangeCode(
     AuthorizationTokenRequest request,
   ) async {
+    lastRequest = request;
     if (authorizeThrows != null) throw authorizeThrows!;
     return authorizeReturns!;
   }
@@ -114,6 +116,19 @@ FlutterAppAuthPlatformErrorDetails _details({
       errorDescription: description,
       domain: domain,
     );
+
+/// The same config with the Cl@ve Movil endpoints filled in.
+extension on ClaveConfig {
+  ClaveConfig copyWithMovil() => ClaveConfig(
+        discoveryUrl: discoveryUrl,
+        clientId: clientId,
+        redirectUri: redirectUri,
+        userInfoUrl: userInfoUrl,
+        logoutUrl: logoutUrl,
+        claveMobileCreateUrl: 'https://idp.example/claveMovil',
+        claveMobileValidateUrl: 'https://idp.example/token',
+      );
+}
 
 const _config = ClaveConfig(
   discoveryUrl: 'https://idp.example/.well-known/openid-configuration',
@@ -280,7 +295,7 @@ void main() {
       );
       await expectLater(
         repo.elevateLoaLevel(
-          method: ClaveAuthMethod.clavePin,
+          method: ClaveAuthMethod.clavePermanente,
           loa: ClaveLoaLevel.high,
         ),
         throwsA(isA<ClaveAuthCancelledError>()),
@@ -297,7 +312,7 @@ void main() {
         storage.values['refresh'] = 'old-rt';
         appAuth.authorizeReturns = _tokens(access: 'new-at', refresh: 'new-rt');
         await repo.elevateLoaLevel(
-          method: ClaveAuthMethod.clavePin,
+          method: ClaveAuthMethod.clavePermanente,
           loa: ClaveLoaLevel.high,
         );
         expect(storage.values['b_access'], isNull);
@@ -314,7 +329,7 @@ void main() {
           );
         await expectLater(
           repo.elevateLoaLevel(
-            method: ClaveAuthMethod.clavePin,
+            method: ClaveAuthMethod.clavePermanente,
             loa: ClaveLoaLevel.high,
           ),
           throwsA(isA<ClaveAuthCancelledError>()),
@@ -322,6 +337,169 @@ void main() {
         expect(storage.values['access'], isNull);
       },
     );
+  });
+
+  group('the browser session', () {
+    test('forces re-authentication and runs ephemeral', () async {
+      appAuth.authorizeReturns = _tokens(access: 'at');
+      await repo.login(method: ClaveAuthMethod.clavePin);
+
+      final request = appAuth.lastRequest!;
+      // Without prompt=login the gateway may answer from an existing session
+      // and hand back a token without the user proving anything.
+      expect(request.promptValues, ['login']);
+      // Ephemeral means the government gateway neither sees nor leaves behind
+      // a Safari session belonging to the rest of the device.
+      expect(
+        request.externalUserAgent,
+        ExternalUserAgent.ephemeralAsWebAuthenticationSession,
+      );
+      expect(request.allowInsecureConnections, isFalse);
+      expect(request.additionalParameters, {'loa': '1', 'idp': 'PIN24H'});
+    });
+
+    test('both behaviours can be turned off', () async {
+      final plain = ClaveRepository(
+        const ClaveConfig(
+          discoveryUrl: 'https://idp.example/.well-known/openid-configuration',
+          clientId: 'client',
+          redirectUri: 'com.example.app://cb',
+          userInfoUrl: 'https://idp.example/userinfo',
+          logoutUrl: 'https://idp.example/logout',
+          preferEphemeralSession: false,
+          promptLogin: false,
+        ),
+        appAuth: appAuth,
+        storage: storage,
+      );
+      appAuth.authorizeReturns = _tokens(access: 'at');
+      await plain.login(method: ClaveAuthMethod.clavePin);
+
+      expect(appAuth.lastRequest!.promptValues, isNull);
+      expect(
+        appAuth.lastRequest!.externalUserAgent,
+        ExternalUserAgent.asWebAuthenticationSession,
+      );
+    });
+
+    test('the default LOA is sent as a number, not an enum name', () async {
+      // The reference client sends `LoaTypes.low.toString()` here, which puts
+      // the literal text "LoaTypes.low" on the wire where a digit belongs.
+      appAuth.authorizeReturns = _tokens(access: 'at');
+      await repo.login(method: ClaveAuthMethod.clavePermanente);
+      expect(appAuth.lastRequest!.additionalParameters!['loa'], '1');
+    });
+  });
+
+  group('level-of-assurance constraints', () {
+    test('Cl@ve PIN cannot reach the high level', () async {
+      // Documented by the reference client as "PIN24H no soporta LOA3". The
+      // gateway rejects the pairing rather than downgrading it, so there is
+      // nothing to learn by sending it.
+      await expectLater(
+        repo.login(
+          method: ClaveAuthMethod.clavePin,
+          loa: ClaveLoaLevel.high,
+        ),
+        throwsA(isA<ClaveUnknownError>()),
+      );
+      // Refused before the browser ever opened.
+      expect(appAuth.authorizeReturns, isNull);
+    });
+
+    test('every other method reaches every level', () {
+      for (final method in ClaveAuthMethod.values) {
+        for (final loa in ClaveLoaLevel.values) {
+          final supported = method.supportsLoa(loa);
+          expect(
+            supported,
+            method != ClaveAuthMethod.clavePin || loa != ClaveLoaLevel.high,
+            reason: '${method.name} at ${loa.name}',
+          );
+        }
+      }
+    });
+  });
+
+  group('Cl@ve Movil failures are classified by what the service said', () {
+    ClaveRepository repoAnswering(int status, String body) => ClaveRepository(
+          _config.copyWithMovil(),
+          appAuth: appAuth,
+          storage: storage,
+          httpClient: ClaveHttpClient(
+            MockClient((_) async => http.Response(body, status)),
+          ),
+        );
+
+    test('a bad contrast is named as such', () async {
+      final r = repoAnswering(
+        400,
+        '{"messages":[{"details":'
+        '"Error de validación en el Dato de Contraste. "}]}',
+      );
+      await expectLater(
+        r.sendNotificationCode(document: '12345678Z', contrast: 'wrong'),
+        throwsA(isA<ClaveInvalidContrastError>()),
+      );
+    });
+
+    test('a pending request is named as such', () async {
+      // Matched on a fragment of the service's own long message; the previous
+      // guess looked for "ya existe", which this text never contains.
+      final r = repoAnswering(
+        400,
+        '{"messages":[{"details":"No ha sido posible generar una nueva '
+        'petición de autenticación con Cl@ve Móvil. Por su seguridad, acceda '
+        'a la APP Cl@ve de su dispositivo móvil y rechace la petición '
+        'pendiente ó espere a que caduque tras un máximo de 5 minutos. "}]}',
+      );
+      await expectLater(
+        r.sendNotificationCode(document: '12345678Z', contrast: '01-01-2030'),
+        throwsA(isA<ClaveRequestAlreadySentError>()),
+      );
+    });
+
+    test('an expired request is read out of error_description', () async {
+      final r = repoAnswering(
+        400,
+        '{"error":"invalid_grant","error_description":'
+        '"La petición Clave Móvil ha expirado. "}',
+      );
+      await expectLater(
+        r.validateNotificationCode(
+          session: const ClaveMobileSession(
+            token: 'tok',
+            verificationCode: '1234',
+            document: '12345678Z',
+          ),
+        ),
+        throwsA(isA<ClaveSessionExpiredError>()),
+      );
+    });
+
+    test('an unrecognised failure is a refusal, not an unknown', () async {
+      // These endpoints answer one question — was this approved. Anything that
+      // is not "wait" or "expired" means it was not.
+      final r = repoAnswering(422, 'something the service has never sent');
+      await expectLater(
+        r.sendNotificationCode(document: '12345678Z', contrast: '01-01-2030'),
+        throwsA(isA<ClaveRefusedError>()),
+      );
+    });
+
+    test('still waiting is still waiting', () async {
+      final r = repoAnswering(403, '');
+      await expectLater(
+        r.validateNotificationCode(
+          session: const ClaveMobileSession(
+            token: 'tok',
+            verificationCode: '1234',
+            document: '12345678Z',
+          ),
+        ),
+        throwsA(isA<ClaveIdleError>()),
+      );
+    });
   });
 
   test('logout clears the device even when the server cannot be told',

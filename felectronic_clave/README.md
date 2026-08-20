@@ -256,6 +256,16 @@ final contrastError = dateInput.validateContrast(isDni: true);
 
 ### ClaveAuthMethod
 
+`ClaveAuthMethod.supportsLoa` encodes one constraint the gateway will not
+negotiate: **Cl@ve PIN cannot reach the high level of assurance.** A PIN sent
+by SMS is not a qualified credential, and asking for it produces a failure
+rather than a downgrade, so `login` refuses the pairing before opening the
+browser.
+
+`stork` and `europeanCredential` are separate providers (`STORK` and `EIDAS`),
+not two names for one.
+
+
 | Value | IDP String | Description |
 |-------|-----------|-------------|
 | `clavePin` | `PIN24H` | Temporary 24-hour PIN via SMS |
@@ -344,21 +354,70 @@ try {
 }
 ```
 
+## Reference implementation
+
+Every wire-level decision here follows the Spanish government App Factory's own
+Flutter client, which runs against the live Cl@ve gateway. Where this package
+and that client disagreed, the client was taken as correct — it is the only one
+of the two that has ever been answered by the real service.
+
+That diff found four things this package had wrong, none of which its tests
+could have caught, because the fakes were written from the same reading as the
+code:
+
+- **The notification request had the wrong shape.** It sent
+  `{"doc":…,"contraste":…}`; the service takes a key/value envelope,
+  `{"params":[{"key":"doc","value":…},…]}`. Cl@ve Movil could never have
+  worked.
+- **Logout was a different request.** The access token belongs in an
+  `Authorization: Bearer` header, not in a `token` form field.
+- **Half the failures were unreadable.** The two Movil endpoints are separate
+  services with separate error shapes — the notification API answers
+  `{"messages":[{"details":…}]}`, and validation goes to Keycloak, which
+  answers `{"error_description":…}`. Only the first was parsed.
+- **`STORK` was missing.** The gateway treats `STORK` and `EIDAS` as different
+  identity providers.
+
+Two differences are deliberate. The reference sends its default level of
+assurance as `LoaTypes.low.toString()`, which puts the literal text
+`"LoaTypes.low"` on the wire where a digit belongs; this package sends the
+number. And the reference clears the device's tokens only when the logout
+request succeeds, keeps no polling timeout, and ends the session on any refresh
+failure including a network one — the handling here is described under
+[What the errors distinguish](#what-the-errors-distinguish).
+
+### The browser session
+
+Two options carry over from the reference and are on by default, because
+neither is a detail a caller should have to discover:
+
+- `preferEphemeralSession` runs the login in an ephemeral
+  `ASWebAuthenticationSession`, so the government gateway neither reads nor
+  leaves behind a Safari session belonging to the rest of the device.
+- `promptLogin` sends `prompt=login`, so the gateway actually asks the user to
+  authenticate instead of answering from a session it already has. This matters
+  most when raising the level of assurance, where re-authentication is the
+  entire point.
+
+`allowInsecureConnections` also exists, defaults to false, and should stay that
+way outside a government test gateway — it disables transport security for the
+one exchange in this package that carries credentials.
+
 ## Status
 
-| | Covered by tests | Run against the real service |
-|---|---|---|
-| Document and contrast validation, JWT parsing | yes | n/a — pure functions |
-| Error mapping, token lifecycle, polling | yes, against fakes | **no** |
-| OAuth login, refresh, logout | yes, against fakes | **no** |
-| Cl@ve Movil create/validate | yes, against fakes | **no** |
+| | Covered by tests | Matched to the reference | Run against the real service |
+|---|---|---|---|
+| Document and contrast validation, JWT parsing | yes | yes | n/a — pure functions |
+| Request and response shapes, idp values | yes | yes | **no** |
+| Error classification | yes | yes | **no** |
+| OAuth login, refresh, logout | yes, against fakes | yes | **no** |
+| Polling timing and lifecycle | yes, against fakes | yes | **no** |
 
-**No request from this package has reached the real Cl@ve service.** The tests
-drive fakes, and a fake written from the same reading as the client agrees with
-it whether or not that reading is right. Treat the wire-level details — the
-`AEAT` idp value on Movil validation, the header-vs-body placement of client
-credentials on the two Movil endpoints, and the `mode` of the notification
-payload — as unverified until a live call proves them.
+**No request from this package has reached the real Cl@ve service.** The diff
+against the reference is the strongest evidence available short of a live call,
+and it is what found the defects above — the tests did not, because a fake
+written from the same reading as the client agrees with it whether or not that
+reading is right.
 
 The example app exercises only the offline validators; it does not perform a
 login.

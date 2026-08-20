@@ -60,6 +60,15 @@ class ClaveRepository {
         ? ClaveLoaLevel.medium
         : (loa ?? config.defaultLoa);
 
+    if (!method.supportsLoa(effectiveLoa)) {
+      // The gateway rejects this pairing rather than quietly downgrading, so
+      // there is nothing to gain by sending it and finding out.
+      throw ClaveUnknownError(
+        '${method.name} cannot authenticate at ${effectiveLoa.name} '
+        'level of assurance',
+      );
+    }
+
     try {
       final response = await _appAuth.authorizeAndExchangeCode(
         AuthorizationTokenRequest(
@@ -68,6 +77,11 @@ class ClaveRepository {
           clientSecret: config.clientSecret,
           discoveryUrl: config.discoveryUrl,
           scopes: ['openid'],
+          promptValues: config.promptLogin ? const ['login'] : null,
+          externalUserAgent: config.preferEphemeralSession
+              ? ExternalUserAgent.ephemeralAsWebAuthenticationSession
+              : ExternalUserAgent.asWebAuthenticationSession,
+          allowInsecureConnections: config.allowInsecureConnections,
           additionalParameters: {
             'loa': '${effectiveLoa.value}',
             'idp': method.idpValue,
@@ -295,8 +309,9 @@ class ClaveRepository {
         contrast: contrast,
       );
 
-      final token = _extractField(response, 'token_clave_movil');
-      final verificationCode = _extractField(response, 'cod_verificacion');
+      final token = ClaveKeyValues.read(response, ClaveKeyValues.mobileToken);
+      final verificationCode =
+          ClaveKeyValues.read(response, ClaveKeyValues.verificationCode);
 
       await _storage.saveDocument(document);
 
@@ -402,28 +417,14 @@ class ClaveRepository {
   // Private
   // ---------------------------------------------------------------------------
 
-  String _extractField(Map<String, dynamic> response, String key) {
-    // Try flat key first
-    final flat = response[key];
-    if (flat is String) return flat;
-    // Try params list
-    final params = response['params'];
-    if (params is List) {
-      for (final item in params) {
-        if (item is Map && item['key'] == key) {
-          final value = item['value'];
-          if (value is String) return value;
-        }
-      }
-    }
-    return '';
-  }
-
   ClaveError _mapClaveApiError(Exception e) {
     if (e is ClaveNetworkException) {
       return ClaveDiscoveryFailedError(e.message);
     }
     if (e is ClaveApiException) {
+      final message = _ClaveServiceMessages.classify(e.body);
+      if (message != null) return message;
+
       switch (e.statusCode) {
         case 401:
           return const ClaveRefusedError();
@@ -434,16 +435,53 @@ class ClaveRepository {
         case 409:
           return const ClaveRequestAlreadySentError();
       }
-      final body = e.body.toLowerCase();
-      if (body.contains('expirado')) return const ClaveSessionExpiredError();
-      if (body.contains('contraste')) {
-        return const ClaveInvalidContrastError();
-      }
-      if (body.contains('ya existe') || body.contains('already')) {
-        return const ClaveRequestAlreadySentError();
-      }
+      // The reference client treats an unrecognised failure from these
+      // endpoints as a refusal rather than as something unknown: they answer
+      // about one question — was this request approved — and anything that is
+      // not "wait" or "expired" means it was not.
+      return ClaveRefusedError(e.body.isEmpty ? null : e.body);
     }
 
     return ClaveUnknownError(e.toString());
+  }
+}
+
+/// The messages the Cl@ve Movil services send, and what they mean.
+///
+/// Status codes alone are not enough: the notification API reports a bad
+/// contrast and an already-pending request both as 4xx with the distinguishing
+/// detail only in the body, and Keycloak reports an expired request as an
+/// `error_description` on a generic failure.
+///
+/// The full strings are recorded because they are the service's own wording
+/// and are the only evidence of what it sends; matching is done on a
+/// distinctive fragment so that a trailing space or a punctuation change does
+/// not silently stop classifying a failure.
+abstract final class _ClaveServiceMessages {
+  /// `'Error de validación en el Dato de Contraste. '`
+  static const contrastFragment = 'Dato de Contraste';
+
+  /// The request-already-sent message, which runs to several sentences and
+  /// tells the user to reject the pending request in the Cl@ve app or wait up
+  /// to five minutes for it to lapse.
+  static const alreadySentFragment = 'rechace la petición pendiente';
+
+  /// `'La petición Clave Móvil ha expirado. '`
+  static const expiredFragment = 'ha expirado';
+
+  /// Classifies a failure body, or returns null when it says nothing useful.
+  static ClaveError? classify(String body) {
+    if (body.isEmpty) return null;
+    final text = body.toLowerCase();
+    if (text.contains(contrastFragment.toLowerCase())) {
+      return const ClaveInvalidContrastError();
+    }
+    if (text.contains(alreadySentFragment.toLowerCase())) {
+      return const ClaveRequestAlreadySentError();
+    }
+    if (text.contains(expiredFragment.toLowerCase())) {
+      return const ClaveSessionExpiredError();
+    }
+    return null;
   }
 }

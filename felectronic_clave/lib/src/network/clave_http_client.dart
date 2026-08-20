@@ -30,6 +30,18 @@ class ClaveHttpClient {
   /// Creates a Cl@ve Movil notification code.
   ///
   /// Returns the raw JSON response body as a map.
+  ///
+  /// The body is a **key/value envelope**, not a flat object:
+  ///
+  /// ```json
+  /// {"params":[{"key":"doc","value":"..."},
+  ///            {"key":"contraste","value":"..."}]}
+  /// ```
+  ///
+  /// An earlier revision sent `{"doc":...,"contraste":...}`, which this
+  /// endpoint does not accept. The credentials go in the *headers* here, and
+  /// in the *body* on the validate call — the two endpoints are different
+  /// services and genuinely disagree.
   Future<Map<String, dynamic>> createNotificationCode({
     required String url,
     required String clientId,
@@ -44,7 +56,10 @@ class ClaveHttpClient {
           'client_id': clientId,
           if (clientSecret != null) 'client_secret': clientSecret,
         },
-        {'doc': document, 'contraste': contrast},
+        ClaveKeyValues.envelope({
+          ClaveKeyValues.document: document,
+          ClaveKeyValues.contrast: contrast,
+        }),
       );
 
   /// Validates a Cl@ve Movil notification code (polls for user approval).
@@ -82,6 +97,10 @@ class ClaveHttpClient {
       _getJson(url, {'Authorization': 'Bearer $accessToken'});
 
   /// Posts a logout request. Returns whether the server accepted it.
+  ///
+  /// The access token authenticates the call as a bearer header; the body
+  /// names the session to end. An earlier revision sent the access token as a
+  /// `token` form field with no header, which is a different request.
   Future<bool> logout({
     required String url,
     required String clientId,
@@ -92,11 +111,13 @@ class ClaveHttpClient {
     final response = await _send(
       () => _client.post(
         Uri.parse(url),
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
         body: {
           'client_id': clientId,
           if (clientSecret != null) 'client_secret': clientSecret,
-          'token': accessToken,
           'refresh_token': refreshToken,
         },
       ),
@@ -180,16 +201,30 @@ class ClaveHttpClient {
     }
   }
 
+  /// Extracts the server's own message from a failure body.
+  ///
+  /// The two Cl@ve Movil endpoints are different services and report failures
+  /// differently. The notification API answers
+  /// `{"messages":[{"details":"..."}]}`, while validation goes to Keycloak,
+  /// which answers `{"error":"...","error_description":"..."}`. An earlier
+  /// revision read only the first shape, so every failure from the validate
+  /// endpoint arrived as an unparsed blob and could not be classified.
   ClaveApiException _mapHttpError(http.Response response) {
     final body = response.body;
     try {
       final json = jsonDecode(body);
-      final messages = json is Map ? json['messages'] : null;
-      if (messages is List && messages.isNotEmpty) {
-        final first = messages.first;
-        final details = first is Map ? first['details'] as String? : null;
-        if (details != null) {
-          return ClaveApiException(response.statusCode, details);
+      if (json is Map) {
+        final messages = json['messages'];
+        if (messages is List && messages.isNotEmpty) {
+          final first = messages.first;
+          final details = first is Map ? first['details'] as String? : null;
+          if (details != null) {
+            return ClaveApiException(response.statusCode, details);
+          }
+        }
+        final description = json['error_description'];
+        if (description is String) {
+          return ClaveApiException(response.statusCode, description);
         }
       }
     } on Object {
@@ -200,6 +235,53 @@ class ClaveHttpClient {
 
   /// Releases the underlying HTTP client.
   void close() => _client.close();
+}
+
+/// The key/value envelope the Cl@ve Movil notification API speaks.
+///
+/// Both its requests and its responses carry a `params` list of
+/// `{"key":..., "value":...}` pairs rather than a plain object.
+abstract final class ClaveKeyValues {
+  /// The document (DNI or NIE) being authenticated.
+  static const document = 'doc';
+
+  /// The contrast datum: a validity date for a DNI, a support number for a
+  /// NIE.
+  static const contrast = 'contraste';
+
+  /// The session token returned by the create call, replayed on validation.
+  static const mobileToken = 'token_clave_movil';
+
+  /// The code shown to the user so they can confirm they are approving the
+  /// request they started, and not somebody else's.
+  static const verificationCode = 'cod_verificacion';
+
+  /// Wraps [values] into the `params` envelope.
+  static Map<String, Object?> envelope(Map<String, String> values) => {
+        'params': [
+          for (final entry in values.entries)
+            {'key': entry.key, 'value': entry.value},
+        ],
+      };
+
+  /// Reads [key] out of an envelope, tolerating a flat object too.
+  ///
+  /// Returns an empty string when the key is absent, which the caller treats
+  /// as "the service did not give us one".
+  static String read(Map<String, dynamic> response, String key) {
+    final flat = response[key];
+    if (flat is String) return flat;
+    final params = response['params'];
+    if (params is List) {
+      for (final item in params) {
+        if (item is Map && item['key'] == key) {
+          final value = item['value'];
+          if (value is String) return value;
+        }
+      }
+    }
+    return '';
+  }
 }
 
 /// {@template clave_api_exception}

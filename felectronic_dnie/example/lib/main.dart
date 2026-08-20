@@ -1153,6 +1153,7 @@ class _ClaveTabState extends State<_ClaveTab>
     ClaveAuthMethod.clavePin => Icons.pin,
     ClaveAuthMethod.clavePermanente => Icons.lock,
     ClaveAuthMethod.electronicCertificate => Icons.badge,
+    ClaveAuthMethod.stork => Icons.public,
     ClaveAuthMethod.europeanCredential => Icons.language,
     ClaveAuthMethod.claveMovil => Icons.phone_android,
   };
