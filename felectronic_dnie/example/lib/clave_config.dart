@@ -49,18 +49,18 @@ import 'package:felectronic_clave/felectronic_clave.dart';
 /// Every field below can be overridden the same way, so pointing this at your
 /// own client registration needs no code change.
 abstract final class ExampleClaveConfig {
-  /// Which government environment to talk to: `pre` or `pro`.
+  /// Which government environment to talk to: `pro` or `pre`.
   ///
-  /// Defaults to pre-production. Production issues tokens for real identities
-  /// and needs a client registered for your own app — the demo client id below
-  /// is a pre-production registration and will not be accepted there.
+  /// Defaults to **production**, because pre-production is no longer serving
+  /// (every path returns 503). Production authenticates real identities, so a
+  /// login here signs in an actual person with an actual Cl@ve credential.
   ///
   /// ```sh
-  /// flutter run --dart-define=CLAVE_ENV=pro
+  /// flutter run --dart-define=CLAVE_ENV=pre
   /// ```
   static const environment = String.fromEnvironment(
     'CLAVE_ENV',
-    defaultValue: 'pre',
+    defaultValue: 'pro',
   );
 
   static bool get _isPre => environment != 'pro';
@@ -86,11 +86,21 @@ abstract final class ExampleClaveConfig {
     defaultValue: 'com.auth0.example://login-callback',
   );
 
+  /// The App Factory's demo client, registered against **pre-production**.
+  ///
+  /// Kept as the fallback so the pre environment stays runnable if it ever
+  /// returns, but production will reject it: a client id is scoped to the
+  /// realm it was registered in.
+  static const _demoClientId = 'e7cb008e-2428-4ad3-a583-e4c9d961a97f';
+
   /// The OAuth client id.
   static const clientId = String.fromEnvironment(
     'CLAVE_CLIENT_ID',
-    defaultValue: 'e7cb008e-2428-4ad3-a583-e4c9d961a97f',
+    defaultValue: _demoClientId,
   );
+
+  /// Whether this is the pre-production demo client rather than your own.
+  static bool get isDemoClient => clientId == _demoClientId;
 
   /// The client secret, empty unless supplied at build time.
   ///
@@ -106,15 +116,20 @@ abstract final class ExampleClaveConfig {
   ///
   /// The example cannot complete a login as shipped, and saying why up front
   /// is better than a failure several seconds later that reads as a bug.
-  static String get readiness => _isPre
-      ? 'Pointing at pre-production, which is currently returning 503 for '
-            'every request — login will fail with a discovery error. See '
-            'clave_config.dart for how to point this at your own client.'
-      : hasClientSecret
-      ? 'Pointing at production with a client secret.'
-      : 'Pointing at production without a client secret. If your client is '
-            'registered as confidential the token exchange will be refused; '
-            'pass --dart-define=CLAVE_CLIENT_SECRET=…';
+  static String get readiness {
+    if (_isPre) {
+      return 'Pointing at pre-production, which is returning 503 for every '
+          'request — login will fail with a discovery error.';
+    }
+    if (isDemoClient) {
+      return 'Pointing at production, but still using the App Factory demo '
+          'client id, which is a pre-production registration. Production will '
+          'reject it. Pass --dart-define=CLAVE_CLIENT_ID=<yours>.';
+    }
+    return 'Pointing at production as a '
+        '${hasClientSecret ? 'confidential' : 'public'} client. '
+        'Real identities — a login here signs in an actual person.';
+  }
 
   /// The assembled configuration.
   static ClaveConfig get config => ClaveConfig(
