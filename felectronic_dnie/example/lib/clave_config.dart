@@ -2,11 +2,31 @@ import 'package:felectronic_clave/felectronic_clave.dart';
 
 /// Cl@ve configuration for the example, pointing at a government gateway.
 ///
-/// Defaults to **pre-production**. Note that the pre gateway is frequently
-/// down — it answered 503 when this was last exercised — so a
-/// `ClaveDiscoveryFailedError` here usually means the service is unavailable
-/// rather than that anything is misconfigured. `curl` the discovery URL to
-/// tell the two apart.
+/// ## The pre-production environment is currently unavailable
+///
+/// Checked on 2026-08-20: every path under `auth-pre-api.redsara.es` answers
+/// **503**, including the root, and `rtf-pre-api.redsara.es` refuses the
+/// connection outright. So a `ClaveDiscoveryFailedError` from the default
+/// configuration is the service being down, not a mistake in your setup.
+///
+/// Production is up — its discovery document advertises exactly the endpoints
+/// derived below — but it needs a client registered for your own app, and it
+/// authenticates real identities. The demo client id here is a pre-production
+/// registration that production will not accept.
+///
+/// The practical consequence: **this example cannot complete a login as
+/// shipped.** To run one, register a client and pass its details:
+///
+/// ```sh
+/// flutter run \
+///   --dart-define=CLAVE_ENV=pro \
+///   --dart-define=CLAVE_CLIENT_ID=<your client> \
+///   --dart-define=CLAVE_REDIRECT_URI=<your scheme>://login-callback \
+///   --dart-define=CLAVE_CLIENT_SECRET=<if confidential>
+/// ```
+///
+/// The redirect scheme must also be registered in `ios/Runner/Info.plist` and
+/// in `android/app/build.gradle.kts`.
 ///
 /// The endpoints, the client id and the redirect URI are the ones the Spanish
 /// App Factory publishes with its own demo client, so this runs against a real
@@ -81,6 +101,20 @@ abstract final class ExampleClaveConfig {
 
   /// Whether a secret was supplied, so the UI can say why login will fail.
   static bool get hasClientSecret => clientSecret.isNotEmpty;
+
+  /// What a caller should know before tapping login, in one sentence.
+  ///
+  /// The example cannot complete a login as shipped, and saying why up front
+  /// is better than a failure several seconds later that reads as a bug.
+  static String get readiness => _isPre
+      ? 'Pointing at pre-production, which is currently returning 503 for '
+            'every request — login will fail with a discovery error. See '
+            'clave_config.dart for how to point this at your own client.'
+      : hasClientSecret
+      ? 'Pointing at production with a client secret.'
+      : 'Pointing at production without a client secret. If your client is '
+            'registered as confidential the token exchange will be refused; '
+            'pass --dart-define=CLAVE_CLIENT_SECRET=…';
 
   /// The assembled configuration.
   static ClaveConfig get config => ClaveConfig(

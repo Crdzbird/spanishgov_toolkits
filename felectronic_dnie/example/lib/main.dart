@@ -997,15 +997,48 @@ class _ClaveTabState extends State<_ClaveTab>
         _status = 'Done';
         _result = result;
       });
+      _report(label.replaceAll('…', ''), result, ok: true);
     } on ClaveError catch (e) {
       if (!mounted) return;
       setState(() {
         _status = e.runtimeType.toString();
         _result = e.message;
       });
+      _report(e.runtimeType.toString(), e.message, ok: false);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Surfaces an outcome over the current viewport.
+  ///
+  /// The status card sits at the bottom of a long list, so on a scrolled page
+  /// an action appeared to do nothing at all — the login below takes about
+  /// three seconds to fail against an unreachable gateway, and every bit of
+  /// that feedback was off screen.
+  void _report(String title, String detail, {required bool ok}) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+    messenger
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          duration: Duration(seconds: ok ? 4 : 8),
+          backgroundColor: ok ? null : Theme.of(context).colorScheme.error,
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              if (detail.isNotEmpty)
+                Text(detail, maxLines: 4, overflow: TextOverflow.ellipsis),
+            ],
+          ),
+        ),
+      );
   }
 
   @override
@@ -1086,17 +1119,13 @@ class _ClaveTabState extends State<_ClaveTab>
         const _Section(title: 'Cl@ve Login'),
         _CardSection(
           children: [
-            if (!ExampleClaveConfig.hasClientSecret)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 12),
-                child: Text(
-                  'No client secret was supplied, and the demo client is '
-                  'registered as confidential — the token exchange will be '
-                  'refused. Pass --dart-define=CLAVE_CLIENT_SECRET=… to run '
-                  'the real flow.',
-                  style: TextStyle(fontSize: 12),
-                ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                ExampleClaveConfig.readiness,
+                style: const TextStyle(fontSize: 12),
               ),
+            ),
             Row(
               children: [
                 const Text('Level of assurance'),
@@ -1118,6 +1147,32 @@ class _ClaveTabState extends State<_ClaveTab>
               ],
             ),
             const SizedBox(height: 8),
+            // The status card is far below; a scrolled page needs the outcome
+            // here, beside the button that caused it.
+            if (_busy || _result.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_busy)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 8, top: 2),
+                        child: SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    Expanded(
+                      child: Text(
+                        _busy ? _status : '$_status — $_result',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ...ClaveAuthMethod.values
                 .where((m) => m != ClaveAuthMethod.claveMovil)
                 .map((m) {
