@@ -30,7 +30,10 @@ android {
         versionName = flutter.versionName
 
         // Required by flutter_appauth for OAuth redirect handling
-        manifestPlaceholders["appAuthRedirectScheme"] = "com.example.verygoodcore.example"
+        // Must match the scheme of the redirect URI the Cl@ve client is
+        // registered with — the demo client uses com.auth0.example. A
+        // mismatch fails only after the user has authenticated.
+        manifestPlaceholders["appAuthRedirectScheme"] = "com.auth0.example"
     }
 
     buildTypes {

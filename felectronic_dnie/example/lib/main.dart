@@ -5,6 +5,7 @@ import 'package:felectronic_certificates/felectronic_certificates.dart'
     as certs;
 import 'package:felectronic_clave/felectronic_clave.dart';
 import 'package:felectronic_dnie/felectronic_dnie.dart';
+import 'package:felectronic_dnie_example/clave_config.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -945,14 +946,66 @@ class _ClaveTabState extends State<_ClaveTab>
   String _status = 'Ready';
   String _result = '';
 
+  late final ClaveRepository _clave = ClaveRepository(
+    ExampleClaveConfig.config,
+  );
+  ClaveMobilePoller? _poller;
+  StreamSubscription<ClavePollStatus>? _pollSub;
+
+  bool _busy = false;
+  bool _loggedIn = false;
+  ClaveLoaLevel _loa = ClaveLoaLevel.low;
+  String? _verificationCode;
+
   @override
   bool get wantKeepAlive => true;
 
   @override
+  void initState() {
+    super.initState();
+    // A session can outlive the app; show it rather than starting blank.
+    unawaited(
+      _clave.getStoredToken().then((token) {
+        if (mounted && token != null) setState(() => _loggedIn = true);
+      }),
+    );
+  }
+
+  @override
   void dispose() {
+    unawaited(_pollSub?.cancel());
+    _poller?.cancel();
+    _clave.dispose();
     _docCtl.dispose();
     _contrastCtl.dispose();
     super.dispose();
+  }
+
+  /// Runs [action], reporting whatever it throws as the typed Cl@ve error it
+  /// is. Every failure the package raises is a `ClaveError` with a message
+  /// worth showing.
+  Future<void> _run(String label, Future<String> Function() action) async {
+    setState(() {
+      _busy = true;
+      _status = label;
+      _result = '';
+    });
+    try {
+      final result = await action();
+      if (!mounted) return;
+      setState(() {
+        _status = 'Done';
+        _result = result;
+      });
+    } on ClaveError catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _status = e.runtimeType.toString();
+        _result = e.message;
+      });
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   @override
@@ -1029,20 +1082,141 @@ class _ClaveTabState extends State<_ClaveTab>
         ),
         const SizedBox(height: 16),
 
-        // --- Auth Methods ---
-        const _Section(title: 'Cl@ve Auth Methods'),
+        // --- Login ---
+        const _Section(title: 'Cl@ve Login'),
         _CardSection(
-          children: ClaveAuthMethod.values
-              .map(
-                (m) => ListTile(
-                  dense: true,
-                  leading: Icon(_icon(m)),
-                  title: Text(m.name),
-                  subtitle: Text('IDP: ${m.idpValue}'),
-                  contentPadding: EdgeInsets.zero,
+          children: [
+            if (!ExampleClaveConfig.hasClientSecret)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'No client secret was supplied, and the demo client is '
+                  'registered as confidential — the token exchange will be '
+                  'refused. Pass --dart-define=CLAVE_CLIENT_SECRET=… to run '
+                  'the real flow.',
+                  style: TextStyle(fontSize: 12),
                 ),
-              )
-              .toList(),
+              ),
+            Row(
+              children: [
+                const Text('Level of assurance'),
+                const SizedBox(width: 12),
+                DropdownButton<ClaveLoaLevel>(
+                  value: _loa,
+                  onChanged: _busy
+                      ? null
+                      : (v) => setState(() => _loa = v ?? _loa),
+                  items: ClaveLoaLevel.values
+                      .map(
+                        (l) => DropdownMenuItem(
+                          value: l,
+                          child: Text('${l.name} (${l.value})'),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...ClaveAuthMethod.values
+                .where((m) => m != ClaveAuthMethod.claveMovil)
+                .map((m) {
+                  // Cl@ve PIN cannot reach LOA3. The package refuses
+                  // that pairing, so the button says so rather than
+                  // opening a browser that fails.
+                  final supported = m.supportsLoa(_loa);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: OutlinedButton.icon(
+                      onPressed: _busy || !supported ? null : () => _login(m),
+                      icon: Icon(_icon(m)),
+                      label: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          supported
+                              ? '${m.name}  ·  ${m.idpValue}'
+                              : '${m.name}  ·  not available at ${_loa.name}',
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // --- Session ---
+        const _Section(title: 'Session'),
+        _CardSection(
+          children: [
+            Text(
+              _loggedIn ? 'A token is stored.' : 'Not signed in.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton(
+                  onPressed: _busy ? null : _showStoredToken,
+                  child: const Text('Show token'),
+                ),
+                OutlinedButton(
+                  onPressed: _busy ? null : _validateToken,
+                  child: const Text('Validate'),
+                ),
+                OutlinedButton(
+                  onPressed: _busy ? null : _refresh,
+                  child: const Text('Refresh'),
+                ),
+                FilledButton.tonal(
+                  onPressed: _busy ? null : _logout,
+                  child: const Text('Log out'),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // --- Cl@ve Movil ---
+        const _Section(title: 'Cl@ve Movil'),
+        _CardSection(
+          children: [
+            Text(
+              'Uses the document and contrast entered above. The app pushes a '
+              'notification to the Cl@ve app, then polls until it is approved.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            if (_verificationCode != null) ...[
+              Text(
+                'Verification code: $_verificationCode',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const Text(
+                'Check this matches what the Cl@ve app shows before approving.',
+                style: TextStyle(fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+            ],
+            Wrap(
+              spacing: 8,
+              children: [
+                FilledButton.icon(
+                  onPressed: _busy ? null : _sendMobileNotification,
+                  icon: const Icon(Icons.phone_android),
+                  label: const Text('Send notification'),
+                ),
+                if (_poller != null)
+                  OutlinedButton(
+                    onPressed: _cancelPolling,
+                    child: const Text('Stop polling'),
+                  ),
+              ],
+            ),
+          ],
         ),
         const SizedBox(height: 16),
 
@@ -1071,13 +1245,151 @@ class _ClaveTabState extends State<_ClaveTab>
         ),
         const SizedBox(height: 24),
         _StatusCard(
-          busy: false,
+          busy: _busy,
           status: _status,
           result: _result,
         ),
       ],
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // Cl@ve actions
+  // ---------------------------------------------------------------------------
+
+  Future<void> _login(ClaveAuthMethod method) => _run(
+    'Opening the Cl@ve browser…',
+    () async {
+      final result = await _clave.login(method: method, loa: _loa);
+      if (mounted) setState(() => _loggedIn = true);
+      final nif = _clave.getNifFromToken(result.accessToken);
+      return 'Method: ${method.name} (${method.idpValue})\n'
+          'LOA: ${_loa.name}\n'
+          'NIF: ${nif.isEmpty ? '(not in token)' : nif}\n'
+          'Access token: ${_preview(result.accessToken)}\n'
+          'Refresh token: ${result.refreshToken == null ? 'none' : 'yes'}\n'
+          'Expires in: ${result.expiresIn ?? '?'}s';
+    },
+  );
+
+  Future<void> _showStoredToken() => _run('Reading storage…', () async {
+    final token = await _clave.getStoredToken();
+    if (token == null) return 'No token stored.';
+    final claims = JwtParser.parsePayload(token) ?? const {};
+    final interesting = ['preferred_username', 'name', 'loa', 'exp', 'iss'];
+    return [
+      'Access token: ${_preview(token)}',
+      '',
+      for (final key in interesting)
+        if (claims[key] != null) '$key: ${claims[key]}',
+    ].join('\n');
+  });
+
+  Future<void> _validateToken() => _run('Checking with the gateway…', () async {
+    final info = await _clave.validateToken();
+    if (info.isEmpty) {
+      if (mounted) setState(() => _loggedIn = false);
+      return 'The gateway rejected the token; the session was cleared.';
+    }
+    return info.entries.map((e) => '${e.key}: ${e.value}').join('\n');
+  });
+
+  Future<void> _refresh() => _run('Refreshing…', () async {
+    final token = await _clave.refreshToken();
+    if (token == null) {
+      if (mounted) setState(() => _loggedIn = false);
+      return 'The refresh token was spent; the session was cleared.';
+    }
+    return 'New access token: ${_preview(token)}';
+  });
+
+  Future<void> _logout() => _run('Logging out…', () async {
+    await _clave.logout();
+    if (mounted) setState(() => _loggedIn = false);
+    return 'Tokens cleared from the device.';
+  });
+
+  Future<void> _sendMobileNotification() async {
+    final doc = _docCtl.text.trim();
+    final contrast = _contrastCtl.text.trim();
+    final docError = doc.validateDocument();
+    if (docError != null) {
+      setState(() {
+        _status = 'Check the document';
+        _result = docError.message;
+      });
+      return;
+    }
+    final contrastError = contrast.validateContrast(
+      isDni: DocumentValidator.isDni(doc),
+    );
+    if (contrastError != null) {
+      setState(() {
+        _status = 'Check the contrast';
+        _result = contrastError.message;
+      });
+      return;
+    }
+
+    await _run('Sending the notification…', () async {
+      final session = await _clave.sendNotificationCode(
+        document: doc,
+        contrast: contrast,
+      );
+      if (mounted) {
+        setState(() => _verificationCode = session.verificationCode);
+      }
+      _startPolling(session);
+      return 'Sent. Approve it in the Cl@ve app — the first check runs after '
+          '20 seconds, then every 5.';
+    });
+  }
+
+  void _startPolling(ClaveMobileSession session) {
+    unawaited(_pollSub?.cancel());
+    _poller?.cancel();
+    final poller = ClaveMobilePoller(_clave);
+    _poller = poller;
+    _pollSub = poller.poll(session: session).listen((status) {
+      if (!mounted) return;
+      switch (status) {
+        case ClavePollWaiting(:final elapsedSeconds):
+          setState(() {
+            _status = 'Waiting for approval… ${elapsedSeconds}s';
+          });
+        case ClavePollSuccess(:final result):
+          setState(() {
+            _status = 'Approved';
+            _result =
+                'Access token: ${_preview(result.accessToken)}\n'
+                'NIF: ${_clave.getNifFromToken(result.accessToken)}';
+            _loggedIn = true;
+            _poller = null;
+            _verificationCode = null;
+          });
+        case ClavePollError(:final error):
+          setState(() {
+            _status = error.runtimeType.toString();
+            _result = error.message;
+            _poller = null;
+          });
+      }
+    });
+  }
+
+  void _cancelPolling() {
+    _poller?.cancel();
+    unawaited(_pollSub?.cancel());
+    setState(() {
+      _poller = null;
+      _status = 'Polling stopped';
+    });
+  }
+
+  /// Tokens are long and mostly noise; show enough to tell two apart.
+  static String _preview(String token) => token.length <= 24
+      ? token
+      : '${token.substring(0, 24)}…(${token.length})';
 
   void _validateDoc() {
     final doc = _docCtl.text.trim();
