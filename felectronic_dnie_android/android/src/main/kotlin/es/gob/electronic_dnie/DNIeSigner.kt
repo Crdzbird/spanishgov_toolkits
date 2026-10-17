@@ -62,7 +62,7 @@ class DNIeSigner {
     }
 
     fun stopSigner(activity: Activity) {
-        nfcConnectionManager.stopScan(activity)
+        nfcConnectionManager.cancelScan(activity)
     }
 
     fun readCertificate(

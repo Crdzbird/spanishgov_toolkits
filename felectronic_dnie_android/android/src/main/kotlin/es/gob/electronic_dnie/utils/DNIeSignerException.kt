@@ -13,6 +13,8 @@ class DSTimeoutException :
         "DNIe card detection timeout. The expected card wasn't detected within the specified time."
     )
 
+class DSCancelledException : DNIeSignerException("The NFC operation was cancelled.")
+
 class DSCardTagException :
     DNIeSignerException("Could not get NFC Tag from the detected card. Scan stopped!")
 

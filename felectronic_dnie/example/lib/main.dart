@@ -511,14 +511,10 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
               certificateType: _certType,
             );
             setState(() {
-              if (r != null) {
-                _status = 'Probe + Sign OK!';
-                _result =
-                    'Complete: ${r.isComplete}\n'
-                    'Size: ${r.signatureSizeBytes} bytes';
-              } else {
-                _status = 'Card is not a valid DNIe.';
-              }
+              _status = 'Probe + Sign OK!';
+              _result =
+                  'Complete: ${r.isComplete}\n'
+                  'Size: ${r.signatureSizeBytes} bytes';
             });
           }),
         ),

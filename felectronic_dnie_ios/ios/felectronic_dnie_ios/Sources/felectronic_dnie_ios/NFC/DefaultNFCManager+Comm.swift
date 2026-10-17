@@ -35,4 +35,13 @@ extension DefaultNFCManager {
     NFCLogger.default.devLog(.nfcReceivedMessage, dniNot)
     sendDniReadInfo(message: dniNot)
   }
+
+  /// Ends the reader session without reporting it as an error, for a caller
+  /// that has already answered every pending request itself.
+  func cancel() {
+    errorHasManaged = true
+    session?.invalidate()
+    session = nil
+    sessionTag = nil
+  }
 }

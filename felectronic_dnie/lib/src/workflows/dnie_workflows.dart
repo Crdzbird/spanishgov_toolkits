@@ -5,10 +5,10 @@ import 'package:felectronic_dnie/src/workflows/dnie_identity.dart';
 import 'package:felectronic_dnie/src/workflows/dnie_readiness.dart';
 import 'package:felectronic_dnie_platform_interface/felectronic_dnie_platform_interface.dart';
 
-/// Probes the card, then signs if valid.
+/// Probes the card, then signs if it is a DNIe.
 ///
-/// Returns `null` if the card is not a valid DNIe.
-Future<SignedData?> probeAndSign({
+/// Throws [DnieNotDnieError] without signing when it is not.
+Future<SignedData> probeAndSign({
   required Uint8List data,
   required String can,
   required String pin,
@@ -16,7 +16,7 @@ Future<SignedData?> probeAndSign({
   Duration timeout = dnieDefaultTimeout,
 }) async {
   final probe = await dnie.probeCard(timeout: timeout);
-  if (!probe.isValidDnie) return null;
+  if (!probe.isValidDnie) throw const DnieNotDnieError();
   return dnie.sign(
     data: data,
     can: can,

@@ -21,7 +21,8 @@ Future<SignedData> sign({
   certificateType: certificateType,
 );
 
-/// Stops an in-progress NFC operation.
+/// Stops the NFC operation in progress, which fails with
+/// [DnieCancelledError].
 Future<void> stopSign() => _platform.stopSign();
 
 /// Reads a certificate from the DNIe without signing data.

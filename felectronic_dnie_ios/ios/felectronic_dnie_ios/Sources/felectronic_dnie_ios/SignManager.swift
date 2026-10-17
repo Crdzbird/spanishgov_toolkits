@@ -9,6 +9,11 @@ import Foundation
 
     // MARK: - Public
 
+    /// Ends the NFC session of the operation in progress, if there is one.
+    public func stop() {
+        nfcManager?.cancel()
+    }
+
     public func signPKCS1WithDNI(
         delegate: ElectronicDnieDelegate,
         can: String,

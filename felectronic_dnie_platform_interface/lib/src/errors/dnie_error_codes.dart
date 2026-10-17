@@ -3,6 +3,8 @@ part of 'dnie_error.dart';
 DnieError _fromPlatformException(PlatformException exception) =>
     switch (exception.code) {
       'DSTimeoutException' => const DnieTimeoutError(),
+      'DSCancelledException' ||
+      'DSUserCancelledException' => const DnieCancelledError(),
       'DSCardTagException' => const DnieCardTagError(),
       'DSDNIeProviderException' => const DnieProviderError(),
       'DSUnderageDocumentException' => const DnieUnderageError(),

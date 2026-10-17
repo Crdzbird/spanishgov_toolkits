@@ -48,7 +48,8 @@ abstract class FelectronicDniePlatform extends PlatformInterface {
     DnieCertificateType certificateType = DnieCertificateType.sign,
   });
 
-  /// Stops an in-progress NFC signing operation.
+  /// Stops the NFC operation in progress, which fails with
+  /// [DnieCancelledError].
   Future<void> stopSign();
 
   /// Reads the [certificateType] certificate without signing anything.

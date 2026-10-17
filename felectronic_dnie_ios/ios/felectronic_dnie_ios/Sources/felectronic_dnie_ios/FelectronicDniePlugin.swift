@@ -62,12 +62,18 @@ public class FelectronicDniePlugin: NSObject, FlutterPlugin, FelectronicDnieHost
     func stopSign(
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
-        pendingSignCompletion = nil
-        pendingCertCompletion = nil
-        pendingProbeCompletion = nil
-        pendingCertDetailsCompletion = nil
-        pendingPersonalDataCompletion = nil
-        pendingVerifyCompletion = nil
+        let cancelled = PigeonError(
+            code: "DSCancelledException",
+            message: "The NFC operation was cancelled.",
+            details: nil
+        )
+        replySign(.failure(cancelled))
+        replyCert(.failure(cancelled))
+        replyProbe(.failure(cancelled))
+        replyCertDetails(.failure(cancelled))
+        replyPersonalData(.failure(cancelled))
+        replyVerify(.failure(cancelled))
+        signManager.stop()
         completion(.success(()))
     }
 

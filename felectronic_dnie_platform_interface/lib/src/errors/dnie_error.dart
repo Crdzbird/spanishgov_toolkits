@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 
+part 'dnie_cancelled_error.dart';
 part 'dnie_card_tag_error.dart';
 part 'dnie_connection_error.dart';
 part 'dnie_damaged_error.dart';
