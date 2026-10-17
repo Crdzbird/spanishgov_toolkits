@@ -83,7 +83,7 @@ void main() {
       final result = await platform.readCertificate(
         can: '654321',
         pin: 'myPin456',
-        timeout: 15,
+        timeout: const Duration(seconds: 15),
       );
 
       expect(result.certificate, 'myCert');

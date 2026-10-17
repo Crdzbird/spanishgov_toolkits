@@ -11,6 +11,7 @@ class MockFelectronicDniePlatform extends Mock
 MockFelectronicDniePlatform installMockPlatform() {
   registerFallbackValue(Uint8List(0));
   registerFallbackValue(DnieCertificateType.sign);
+  registerFallbackValue(Duration.zero);
   final platform = MockFelectronicDniePlatform();
   FelectronicDniePlatform.instance = platform;
   return platform;

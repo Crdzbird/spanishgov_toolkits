@@ -13,7 +13,7 @@ Future<SignedData?> probeAndSign({
   required String can,
   required String pin,
   DnieCertificateType certificateType = DnieCertificateType.sign,
-  int timeout = 30,
+  Duration timeout = dnieDefaultTimeout,
 }) async {
   final probe = await dnie.probeCard(timeout: timeout);
   if (!probe.isValidDnie) return null;
@@ -33,7 +33,7 @@ Future<DnieIdentity> readFullIdentity({
   required String can,
   required String pin,
   DnieCertificateType certificateType = DnieCertificateType.sign,
-  int timeout = 30,
+  Duration timeout = dnieDefaultTimeout,
 }) async => DnieIdentity(
   personalData: await dnie.readPersonalData(
     can: can,
@@ -57,7 +57,7 @@ Future<DnieReadiness> checkReadiness({
   required String can,
   required String pin,
   DnieCertificateType certificateType = DnieCertificateType.sign,
-  int timeout = 30,
+  Duration timeout = dnieDefaultTimeout,
 }) async {
   var nfc = const NfcStatus(isAvailable: false, isEnabled: false);
   CardProbeResult? probe;

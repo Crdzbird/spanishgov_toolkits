@@ -24,10 +24,10 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
     required Uint8List data,
     required String can,
     required String pin,
-    int timeout = 30,
+    Duration timeout = dnieDefaultTimeout,
     DnieCertificateType certificateType = DnieCertificateType.sign,
   }) => api
-      .sign(data, can, pin, timeout, certificateType.value)
+      .sign(data, can, pin, timeout.inSeconds, certificateType.value)
       .then((m) => m.toModel())
       .mapDnieErrors();
 
@@ -38,25 +38,30 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
   Future<SignedData> readCertificate({
     required String can,
     required String pin,
-    int timeout = 30,
+    Duration timeout = dnieDefaultTimeout,
     DnieCertificateType certificateType = DnieCertificateType.sign,
   }) => api
-      .readCertificate(can, pin, timeout, certificateType.value)
+      .readCertificate(can, pin, timeout.inSeconds, certificateType.value)
       .then((m) => m.toModel())
       .mapDnieErrors();
 
   @override
-  Future<CardProbeResult> probeCard({int timeout = 30}) =>
-      api.probeCard(timeout).then((m) => m.toModel()).mapDnieErrors();
+  Future<CardProbeResult> probeCard({Duration timeout = dnieDefaultTimeout}) =>
+      api.probeCard(timeout.inSeconds).then((m) => m.toModel()).mapDnieErrors();
 
   @override
   Future<CertificateInfo> readCertificateDetails({
     required String can,
     required String pin,
-    int timeout = 30,
+    Duration timeout = dnieDefaultTimeout,
     DnieCertificateType certificateType = DnieCertificateType.sign,
   }) => api
-      .readCertificateDetails(can, pin, timeout, certificateType.value)
+      .readCertificateDetails(
+        can,
+        pin,
+        timeout.inSeconds,
+        certificateType.value,
+      )
       .then((m) => m.toModel())
       .mapDnieErrors();
 
@@ -64,10 +69,10 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
   Future<PersonalData> readPersonalData({
     required String can,
     required String pin,
-    int timeout = 30,
+    Duration timeout = dnieDefaultTimeout,
     DnieCertificateType certificateType = DnieCertificateType.sign,
   }) => api
-      .readPersonalData(can, pin, timeout, certificateType.value)
+      .readPersonalData(can, pin, timeout.inSeconds, certificateType.value)
       .then((m) => m.toModel())
       .mapDnieErrors();
 
@@ -75,9 +80,11 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
   Future<void> verifyPin({
     required String can,
     required String pin,
-    int timeout = 30,
+    Duration timeout = dnieDefaultTimeout,
     DnieCertificateType certificateType = DnieCertificateType.sign,
-  }) => api.verifyPin(can, pin, timeout, certificateType.value).mapDnieErrors();
+  }) => api
+      .verifyPin(can, pin, timeout.inSeconds, certificateType.value)
+      .mapDnieErrors();
 
   @override
   Future<NfcStatus> checkNfcAvailability() =>

@@ -107,7 +107,7 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
 
   Future<void> _detectOnce() async {
     try {
-      final p = await probeCard(timeout: 10);
+      final p = await probeCard(timeout: const Duration(seconds: 10));
       if (!mounted) return;
       final at = DateTime.now().toIso8601String().substring(11, 19);
       setState(() {

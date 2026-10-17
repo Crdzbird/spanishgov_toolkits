@@ -9,7 +9,7 @@ Future<SignedData> sign({
   required Uint8List data,
   required String can,
   required String pin,
-  int timeout = 30,
+  Duration timeout = dnieDefaultTimeout,
   DnieCertificateType certificateType = DnieCertificateType.sign,
 }) => _platform.sign(
   data: data,
@@ -26,7 +26,7 @@ Future<void> stopSign() => _platform.stopSign();
 Future<SignedData> readCertificate({
   required String can,
   required String pin,
-  int timeout = 30,
+  Duration timeout = dnieDefaultTimeout,
   DnieCertificateType certificateType = DnieCertificateType.sign,
 }) => _platform.readCertificate(
   can: can,
@@ -36,14 +36,14 @@ Future<SignedData> readCertificate({
 );
 
 /// Probes an NFC card to check if it is a valid Spanish DNIe.
-Future<CardProbeResult> probeCard({int timeout = 30}) =>
+Future<CardProbeResult> probeCard({Duration timeout = dnieDefaultTimeout}) =>
     _platform.probeCard(timeout: timeout);
 
 /// Reads and parses X.509 certificate details from the DNIe.
 Future<CertificateInfo> readCertificateDetails({
   required String can,
   required String pin,
-  int timeout = 30,
+  Duration timeout = dnieDefaultTimeout,
   DnieCertificateType certificateType = DnieCertificateType.sign,
 }) => _platform.readCertificateDetails(
   can: can,
@@ -56,7 +56,7 @@ Future<CertificateInfo> readCertificateDetails({
 Future<PersonalData> readPersonalData({
   required String can,
   required String pin,
-  int timeout = 30,
+  Duration timeout = dnieDefaultTimeout,
   DnieCertificateType certificateType = DnieCertificateType.sign,
 }) => _platform.readPersonalData(
   can: can,
@@ -69,7 +69,7 @@ Future<PersonalData> readPersonalData({
 Future<void> verifyPin({
   required String can,
   required String pin,
-  int timeout = 30,
+  Duration timeout = dnieDefaultTimeout,
   DnieCertificateType certificateType = DnieCertificateType.sign,
 }) => _platform.verifyPin(
   can: can,

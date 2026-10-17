@@ -15,7 +15,7 @@ class FelectronicDnieMock extends FelectronicDniePlatform {
     required Uint8List data,
     required String can,
     required String pin,
-    int timeout = 30,
+    Duration timeout = dnieDefaultTimeout,
     DnieCertificateType certificateType = DnieCertificateType.sign,
   }) async => mockResult;
 
@@ -26,23 +26,24 @@ class FelectronicDnieMock extends FelectronicDniePlatform {
   Future<SignedData> readCertificate({
     required String can,
     required String pin,
-    int timeout = 30,
+    Duration timeout = dnieDefaultTimeout,
     DnieCertificateType certificateType = DnieCertificateType.sign,
   }) async => mockResult;
 
   @override
-  Future<CardProbeResult> probeCard({int timeout = 30}) async =>
-      const CardProbeResult(
-        isValidDnie: true,
-        atrHex: 'E1F35E11',
-        tagId: 'ABCD',
-      );
+  Future<CardProbeResult> probeCard({
+    Duration timeout = dnieDefaultTimeout,
+  }) async => const CardProbeResult(
+    isValidDnie: true,
+    atrHex: 'E1F35E11',
+    tagId: 'ABCD',
+  );
 
   @override
   Future<CertificateInfo> readCertificateDetails({
     required String can,
     required String pin,
-    int timeout = 30,
+    Duration timeout = dnieDefaultTimeout,
     DnieCertificateType certificateType = DnieCertificateType.sign,
   }) async => CertificateInfo(
     subjectCommonName: 'CN',
@@ -59,7 +60,7 @@ class FelectronicDnieMock extends FelectronicDniePlatform {
   Future<PersonalData> readPersonalData({
     required String can,
     required String pin,
-    int timeout = 30,
+    Duration timeout = dnieDefaultTimeout,
     DnieCertificateType certificateType = DnieCertificateType.sign,
   }) async => const PersonalData(
     fullName: 'JUAN GARCIA',
@@ -74,7 +75,7 @@ class FelectronicDnieMock extends FelectronicDniePlatform {
   Future<void> verifyPin({
     required String can,
     required String pin,
-    int timeout = 30,
+    Duration timeout = dnieDefaultTimeout,
     DnieCertificateType certificateType = DnieCertificateType.sign,
   }) async {}
 

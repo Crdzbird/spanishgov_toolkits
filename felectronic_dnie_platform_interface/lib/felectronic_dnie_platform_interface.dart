@@ -1,5 +1,6 @@
 export 'package:felectronic_x509/felectronic_x509.dart';
 
+export 'src/dnie_default_timeout.dart';
 export 'src/errors/dnie_error.dart';
 export 'src/extensions/certificate_info_x.dart';
 export 'src/extensions/dnie_string_validators.dart';

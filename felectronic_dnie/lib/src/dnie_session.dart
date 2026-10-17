@@ -23,7 +23,7 @@ final class DnieSession {
     required String can,
     required String pin,
     DnieCertificateType certificateType = DnieCertificateType.sign,
-    int timeout = 30,
+    Duration timeout = dnieDefaultTimeout,
   }) {
     final error = can.validateCan() ?? pin.validatePin();
     if (error != null) throw ArgumentError(error.message);
@@ -38,8 +38,8 @@ final class DnieSession {
   /// Which certificate to use for operations.
   final DnieCertificateType certificateType;
 
-  /// NFC scan timeout in seconds.
-  final int timeout;
+  /// How long to wait for a card.
+  final Duration timeout;
 
   FelectronicDniePlatform get _platform => FelectronicDniePlatform.instance;
 

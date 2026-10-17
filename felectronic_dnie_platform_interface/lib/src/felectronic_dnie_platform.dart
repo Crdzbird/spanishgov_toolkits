@@ -38,12 +38,13 @@ abstract class FelectronicDniePlatform extends PlatformInterface {
   /// Signs [data] with the private key of [certificateType] via NFC.
   ///
   /// [can] is the 6 digit Card Access Number, [pin] the 8 to 16 character
-  /// PIN, and [timeout] the seconds to wait for a card. Throws [DnieError].
+  /// PIN, and [timeout] how long to wait for a card (see
+  /// [dnieDefaultTimeout] for how each platform treats it). Throws [DnieError].
   Future<SignedData> sign({
     required Uint8List data,
     required String can,
     required String pin,
-    int timeout = 30,
+    Duration timeout = dnieDefaultTimeout,
     DnieCertificateType certificateType = DnieCertificateType.sign,
   });
 
@@ -56,20 +57,20 @@ abstract class FelectronicDniePlatform extends PlatformInterface {
   Future<SignedData> readCertificate({
     required String can,
     required String pin,
-    int timeout = 30,
+    Duration timeout = dnieDefaultTimeout,
     DnieCertificateType certificateType = DnieCertificateType.sign,
   });
 
   /// Probes an NFC card to check if it is a valid Spanish DNIe.
   ///
   /// No CAN or PIN required.
-  Future<CardProbeResult> probeCard({int timeout = 30});
+  Future<CardProbeResult> probeCard({Duration timeout = dnieDefaultTimeout});
 
   /// Reads and parses the [certificateType] certificate's X.509 details.
   Future<CertificateInfo> readCertificateDetails({
     required String can,
     required String pin,
-    int timeout = 30,
+    Duration timeout = dnieDefaultTimeout,
     DnieCertificateType certificateType = DnieCertificateType.sign,
   });
 
@@ -77,7 +78,7 @@ abstract class FelectronicDniePlatform extends PlatformInterface {
   Future<PersonalData> readPersonalData({
     required String can,
     required String pin,
-    int timeout = 30,
+    Duration timeout = dnieDefaultTimeout,
     DnieCertificateType certificateType = DnieCertificateType.sign,
   });
 
@@ -85,7 +86,7 @@ abstract class FelectronicDniePlatform extends PlatformInterface {
   Future<void> verifyPin({
     required String can,
     required String pin,
-    int timeout = 30,
+    Duration timeout = dnieDefaultTimeout,
     DnieCertificateType certificateType = DnieCertificateType.sign,
   });
 

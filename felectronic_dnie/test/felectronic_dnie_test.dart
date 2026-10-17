@@ -24,6 +24,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue(Uint8List(0));
     registerFallbackValue(DnieCertificateType.sign);
+    registerFallbackValue(Duration.zero);
   });
 
   setUp(() {
