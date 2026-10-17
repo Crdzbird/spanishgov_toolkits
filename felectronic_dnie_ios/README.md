@@ -1,5 +1,7 @@
 # felectronic_dnie_ios
 
+[![pub package](https://img.shields.io/pub/v/felectronic_dnie_ios.svg)](https://pub.dev/packages/felectronic_dnie_ios)
+
 The iOS implementation of [`felectronic_dnie`](https://github.com/Crdzbird/spanishgov_toolkits/tree/master/felectronic_dnie).
 
 ## Usage

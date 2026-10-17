@@ -1,5 +1,7 @@
 # felectronic_dnie_platform_interface
 
+[![pub package](https://img.shields.io/pub/v/felectronic_dnie_platform_interface.svg)](https://pub.dev/packages/felectronic_dnie_platform_interface)
+
 A common platform interface for the [`felectronic_dnie`](https://github.com/Crdzbird/spanishgov_toolkits/tree/master/felectronic_dnie) plugin.
 
 This interface allows platform-specific implementations of the `felectronic_dnie`

@@ -2,6 +2,7 @@
 
 A Flutter plugin for reading and signing with the Spanish electronic DNIe (Documento Nacional de Identidad electronico) via NFC.
 
+[![pub package](https://img.shields.io/pub/v/felectronic_dnie.svg)](https://pub.dev/packages/felectronic_dnie)
 [![style: very good analysis][very_good_analysis_badge]][very_good_analysis_link]
 [![License: MIT][license_badge]][license_link]
 

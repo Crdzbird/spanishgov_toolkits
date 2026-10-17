@@ -9,29 +9,29 @@ A suite of Flutter packages for building Spanish government-facing applications.
 
 | Package | Description | Version |
 |---------|-------------|---------|
-| [`felectronic_dnie`](felectronic_dnie/) | NFC operations with the Spanish electronic DNIe | 1.0.0 |
-| [`felectronic_clave`](felectronic_clave/) | Cl@ve OAuth/OIDC authentication for Spanish government services | 1.0.0 |
-| [`felectronic_certificates`](felectronic_certificates/) | Device certificate management (import, sign, list, delete) | 1.0.0 |
-| [`felectronic_x509`](felectronic_x509/) | Pure Dart X.509 certificate parser (no Flutter dependency) | 1.0.0 |
+| [`felectronic_dnie`](felectronic_dnie/) | NFC operations with the Spanish electronic DNIe | [![pub package](https://img.shields.io/pub/v/felectronic_dnie.svg)](https://pub.dev/packages/felectronic_dnie) |
+| [`felectronic_clave`](felectronic_clave/) | Cl@ve OAuth/OIDC authentication for Spanish government services | [![pub package](https://img.shields.io/pub/v/felectronic_clave.svg)](https://pub.dev/packages/felectronic_clave) |
+| [`felectronic_certificates`](felectronic_certificates/) | Device certificate management (import, sign, list, delete) | [![pub package](https://img.shields.io/pub/v/felectronic_certificates.svg)](https://pub.dev/packages/felectronic_certificates) |
+| [`felectronic_x509`](felectronic_x509/) | Pure Dart X.509 certificate parser (no Flutter dependency) | [![pub package](https://img.shields.io/pub/v/felectronic_x509.svg)](https://pub.dev/packages/felectronic_x509) |
 
 ### Internal Packages
 
 These are implementation details of the federated plugins above. You do not need to depend on them directly.
 
-| Package | Description |
-|---------|-------------|
-| [`felectronic_dnie_platform_interface`](felectronic_dnie_platform_interface/) | Shared interface for DNIe platform implementations |
-| [`felectronic_dnie_android`](felectronic_dnie_android/) | Android DNIe implementation |
-| [`felectronic_dnie_ios`](felectronic_dnie_ios/) | iOS DNIe implementation |
-| [`felectronic_certificates_platform_interface`](felectronic_certificates_platform_interface/) | Shared interface for certificate platform implementations |
-| [`felectronic_certificates_android`](felectronic_certificates_android/) | Android certificate implementation |
-| [`felectronic_certificates_ios`](felectronic_certificates_ios/) | iOS certificate implementation |
+| Package | Description | Version |
+|---------|-------------|---------|
+| [`felectronic_dnie_platform_interface`](felectronic_dnie_platform_interface/) | Shared interface for DNIe platform implementations | [![pub package](https://img.shields.io/pub/v/felectronic_dnie_platform_interface.svg)](https://pub.dev/packages/felectronic_dnie_platform_interface) |
+| [`felectronic_dnie_android`](felectronic_dnie_android/) | Android DNIe implementation | [![pub package](https://img.shields.io/pub/v/felectronic_dnie_android.svg)](https://pub.dev/packages/felectronic_dnie_android) |
+| [`felectronic_dnie_ios`](felectronic_dnie_ios/) | iOS DNIe implementation | [![pub package](https://img.shields.io/pub/v/felectronic_dnie_ios.svg)](https://pub.dev/packages/felectronic_dnie_ios) |
+| [`felectronic_certificates_platform_interface`](felectronic_certificates_platform_interface/) | Shared interface for certificate platform implementations | [![pub package](https://img.shields.io/pub/v/felectronic_certificates_platform_interface.svg)](https://pub.dev/packages/felectronic_certificates_platform_interface) |
+| [`felectronic_certificates_android`](felectronic_certificates_android/) | Android certificate implementation | [![pub package](https://img.shields.io/pub/v/felectronic_certificates_android.svg)](https://pub.dev/packages/felectronic_certificates_android) |
+| [`felectronic_certificates_ios`](felectronic_certificates_ios/) | iOS certificate implementation | [![pub package](https://img.shields.io/pub/v/felectronic_certificates_ios.svg)](https://pub.dev/packages/felectronic_certificates_ios) |
 
 ## Platform Support
 
 | Package | Android | iOS | Pure Dart |
 |---------|:-------:|:---:|:---------:|
-| `felectronic_dnie` | API 28+ | iOS 13+ | |
+| `felectronic_dnie` | API 28+ | iOS 15+ | |
 | `felectronic_clave` | API 24+ | iOS 13+ | |
 | `felectronic_certificates` | API 28+ | iOS 13+ | |
 | `felectronic_x509` | | | All platforms |
@@ -78,7 +78,7 @@ Read, sign, and verify identity with the Spanish electronic DNIe via NFC.
 
 ```yaml
 dependencies:
-  felectronic_dnie: ^1.0.0
+  felectronic_dnie: ^2.0.0
 ```
 
 ```dart
