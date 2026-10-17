@@ -7,17 +7,30 @@ The iOS implementation of [`felectronic_dnie`](https://github.com/Crdzbird/spani
 This package is [endorsed](https://flutter.dev/to/endorsed-federated-plugin) and
 will be automatically included when you depend on `felectronic_dnie`.
 
-## Build prerequisite: the j2objc runtime
+## The j2objc runtime
 
-**This pod cannot link out of the box.** Before building an iOS app that uses
-it, run:
+The pod links against the j2objc runtime, `JRE.xcframework`. At about 270 MB
+it is far too large for pub.dev, so it is published as an asset of the GitHub
+release
+[`j2objc-jre-3.0.0`](https://github.com/Crdzbird/spanishgov_toolkits/releases/tag/j2objc-jre-3.0.0)
+and the podspec downloads it the first time `pod install` reads it, into
+`ios/Frameworks/`. Later installs reuse it.
 
-```bash
-felectronic_dnie_ios/Tools/build_jre_emul.sh
-```
+The archive is checked against a SHA-256 pinned in the podspec before anything
+is extracted, and a mismatch stops `pod install` rather than linking an
+unverified binary into your app. The first `pod install` therefore needs
+network access; to use a mirror, set `FELECTRONIC_JRE_URL` to a copy of the
+same archive.
 
-That produces `ios/Frameworks/JRE.xcframework`, which is **not committed** —
-~194 MB of static archives plus 1,573 headers, reproducible from the script.
+j2objc is Apache 2.0; its licence is extracted next to the framework as
+`J2OBJC_LICENSE`.
+
+### Publishing a new runtime (maintainers)
+
+1. `Tools/build_jre_emul.sh` builds `ios/Frameworks/JRE.xcframework`.
+2. `Tools/package_jre.sh` zips it with the licence and prints its SHA-256.
+3. Upload the zip to a release tagged `j2objc-jre-<version>`, then update
+   `jre_version` and `jre_sha256` in the podspec.
 
 ### Why it is needed
 
@@ -29,8 +42,8 @@ does **not** generate: `IOSClass_*`, `IOSArray_*`, and an emulated JRE
 about 195 more types). Without it the pod compiles and then fails to link with
 roughly 460 undefined symbols.
 
-Google no longer publishes prebuilt distributions — the only GitHub release is
-3.1 with zero assets, and there is no Homebrew formula — so it has to be built
+Google no longer publishes prebuilt distributions: the only GitHub release is
+3.1 with zero assets, and there is no Homebrew formula. So it has to be built
 from source.
 
 ### Which version, and how it was determined
@@ -48,7 +61,7 @@ Each of these cost real time to find, and each is a comment in the script:
   from javac internals it was never written against.
 * **`JAVA_HOME` must be the real JDK home.** Homebrew's
   `opt/openjdk@11` symlink has no `lib/jrt-fs.jar`. Do not rely on
-  `/usr/libexec/java_home -v 11` either — on a machine with a newer JDK it
+  `/usr/libexec/java_home -v 11` either: on a machine with a newer JDK it
   answers with that one.
 * **The module image needs `jrt-fs.jar` copied in by hand.** The Makefile rule
   intends to and does not; `javac` then rejects the image with
@@ -57,7 +70,7 @@ Each of these cost real time to find, and each is a comment in the script:
 * **`-Werror` is removed.** j2objc 3.0.0 is from 2023 and Xcode 26's clang
   raises warnings that did not exist then.
 * **All three architectures are required:** `iphone64_simulator_simulator64`.
-  j2objc's names are counter-intuitive — `simulator` is **x86_64** and
+  j2objc's names are counter-intuitive: `simulator` is **x86_64** and
   `simulator64` is **arm64**. Omitting `simulator` yields an arm64-only
   simulator slice, and a wrong-architecture static archive is *silently
   ignored* by the linker: no error, no warning, just undefined symbols that

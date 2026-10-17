@@ -1,3 +1,45 @@
+require 'digest'
+require 'fileutils'
+require 'tmpdir'
+
+# The j2objc runtime is 270 MB, too large for pub.dev, so it is fetched from
+# a GitHub release the first time CocoaPods reads this spec, and checked
+# against a pinned SHA-256 before anything is extracted. Flutter installs
+# plugin pods from a local path, where `prepare_command` never runs, so this
+# has to happen here. FELECTRONIC_JRE_URL points it at a mirror.
+jre_version = '3.0.0'
+jre_sha256 = 'b7c829a683c3ecd82d8f1a719491dd2b45f63b701c9dc62296f5961f2482f0d4'
+jre_url = ENV.fetch(
+  'FELECTRONIC_JRE_URL',
+  'https://github.com/Crdzbird/spanishgov_toolkits/releases/download/' \
+  "j2objc-jre-#{jre_version}/JRE.xcframework-#{jre_version}.zip"
+)
+
+ensure_jre_runtime = lambda do |frameworks_dir|
+  return if File.exist?(File.join(frameworks_dir, 'JRE.xcframework', 'Info.plist'))
+
+  Dir.mktmpdir('felectronic-jre') do |work|
+    archive = File.join(work, 'jre.zip')
+    unless system('curl', '-fsSL', '--retry', '3', '-o', archive, jre_url)
+      raise "felectronic_dnie_ios: could not download the j2objc runtime from #{jre_url}"
+    end
+    actual = Digest::SHA256.file(archive).hexdigest
+    unless actual == jre_sha256
+      raise "felectronic_dnie_ios: the j2objc runtime at #{jre_url} has SHA-256 " \
+            "#{actual}, expected #{jre_sha256}; refusing to use it"
+    end
+    staged = File.join(work, 'staged')
+    unless system('ditto', '-x', '-k', archive, staged)
+      raise 'felectronic_dnie_ios: could not extract the j2objc runtime'
+    end
+    FileUtils.mkdir_p(frameworks_dir)
+    FileUtils.mv(File.join(staged, 'JRE.xcframework'), frameworks_dir)
+    FileUtils.cp(File.join(staged, 'J2OBJC_LICENSE'), frameworks_dir)
+  end
+end
+
+ensure_jre_runtime.call(File.join(__dir__, 'Frameworks'))
+
 Pod::Spec.new do |s|
   s.name             = 'felectronic_dnie_ios'
   s.version          = '1.0.0'
