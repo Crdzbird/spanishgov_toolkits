@@ -16,26 +16,31 @@ class NFCConnectionManager {
     private var nfcAdapter: NfcAdapter? = null
     private var timeoutJob: Job? = null
 
+    /**
+     * Enables reader mode and waits up to [timeoutSeconds] for a card.
+     *
+     * The timeout only bounds the wait for a card. Once a tag is detected it
+     * is cancelled, so a slow PACE handshake or signature is never cut off.
+     */
     fun startScan(
         activity: Activity?,
-        timeout: Long,
+        timeoutSeconds: Long,
         onSuccess: (Tag) -> Unit,
         onError: (Throwable) -> Unit
     ) {
-        // Init nfc adapter
         nfcAdapter = NfcAdapter.getDefaultAdapter(activity)
         Log.i(TAG, "NFC Adapter obtained: $nfcAdapter")
 
-        // Start NFC scan using ReaderCallback
         val readerCallback = NfcAdapter.ReaderCallback { tag ->
+            Log.i(TAG, "Tag detected: ${tag.techList.joinToString()}")
+            timeoutJob?.cancel()
             onSuccess(tag)
         }
 
-        nfcAdapter?.enableReaderMode(activity, readerCallback, NfcAdapter.FLAG_READER_NFC_B, null)
+        nfcAdapter?.enableReaderMode(activity, readerCallback, READER_FLAGS, null)
         Log.i(TAG, "Reader mode enabled")
 
-        // Start timeout timer with coroutines
-        startTimeoutTimer(activity, timeout, onError)
+        startTimeoutTimer(activity, timeoutSeconds, onError)
         Log.i(TAG, "Timeout configured")
     }
 
@@ -48,12 +53,14 @@ class NFCConnectionManager {
 
     private fun startTimeoutTimer(
         activity: Activity?,
-        timeout: Long,
+        timeoutSeconds: Long,
         onError: (DSTimeoutException) -> Unit
     ) {
+        timeoutJob?.cancel()
         timeoutJob = CoroutineScope(Dispatchers.IO).launch {
-            val fixedTimeout = timeout.coerceIn(MIN_DEFAULT_TIMEOUT, MAX_DEFAULT_TIMEOUT)
-            delay(fixedTimeout)
+            val timeoutMillis = (timeoutSeconds * 1000)
+                .coerceIn(MIN_DEFAULT_TIMEOUT, MAX_DEFAULT_TIMEOUT)
+            delay(timeoutMillis)
             stopScan(activity)
             onError(DSTimeoutException())
         }
@@ -63,5 +70,8 @@ class NFCConnectionManager {
         private const val MIN_DEFAULT_TIMEOUT: Long = 3000
         private const val MAX_DEFAULT_TIMEOUT: Long = 30000
         private const val TAG: String = "NFCConnectionManager"
+        private const val READER_FLAGS: Int = NfcAdapter.FLAG_READER_NFC_A or
+            NfcAdapter.FLAG_READER_NFC_B or
+            NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK
     }
 }

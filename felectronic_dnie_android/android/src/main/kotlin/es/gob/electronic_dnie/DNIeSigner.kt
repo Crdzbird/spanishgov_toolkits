@@ -3,6 +3,7 @@ package es.gob.electronic_dnie
 import android.app.Activity
 import android.nfc.Tag
 import android.nfc.tech.IsoDep
+import android.nfc.tech.NfcB
 import es.gob.electronic_dnie.managers.DNIeReaderManager
 import es.gob.electronic_dnie.managers.NFCConnectionManager
 import es.gob.electronic_dnie.model.CertificateDetails
@@ -45,8 +46,14 @@ class DNIeSigner {
                     can = can,
                     tag = tag,
                     signType = signType,
-                    onError = onError,
-                    onSuccess = onSuccess,
+                    onError = {
+                        nfcConnectionManager.stopScan(activity)
+                        onError(it)
+                    },
+                    onSuccess = {
+                        nfcConnectionManager.stopScan(activity)
+                        onSuccess(it)
+                    },
                     isDebug = isDebug
                 )
             },
@@ -118,10 +125,13 @@ class DNIeSigner {
                         return@startScan
                     }
                     isoDep.connect()
-                    val historicalBytes = isoDep.historicalBytes ?: isoDep.hiLayerResponse ?: ByteArray(0)
-                    val atrHex = historicalBytes.joinToString("") { "%02X".format(it) }
+                    val atrBytes = NfcB.get(tag)?.applicationData
+                        ?: isoDep.historicalBytes
+                        ?: isoDep.hiLayerResponse
+                        ?: ByteArray(0)
+                    val atrHex = atrBytes.joinToString("") { "%02X".format(it) }
                     val tagId = tag.id.joinToString("") { "%02X".format(it) }
-                    val isValid = atrHex.contains("E1F35E11")
+                    val isValid = atrHex.contains(DNIE_APPLICATION_DATA)
                     isoDep.close()
                     nfcConnectionManager.stopScan(activity)
                     onSuccess(ProbeResult(isValid, atrHex, tagId))
@@ -251,5 +261,8 @@ class DNIeSigner {
             )
         }
     }
-}
 
+    companion object {
+        private const val DNIE_APPLICATION_DATA = "E1F35E11"
+    }
+}

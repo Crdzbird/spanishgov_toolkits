@@ -77,11 +77,56 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
   String _status = 'Ready';
   String _result = '';
   bool _busy = false;
+  bool _autoDetect = false;
+  bool _detecting = false;
   NfcStatus? _nfc;
   DnieCertificateType _certType = DnieCertificateType.sign;
 
   @override
   bool get wantKeepAlive => true;
+
+  bool get _locked => _busy || _detecting;
+
+  Future<void> _setAutoDetect(bool on) async {
+    setState(() => _autoDetect = on);
+    if (!on || _detecting) return;
+    setState(() {
+      _detecting = true;
+      _status = 'Hold a card against the back of the phone';
+      _result = '';
+    });
+    while (_autoDetect && mounted) {
+      await _detectOnce();
+    }
+    if (!mounted) return;
+    setState(() {
+      _detecting = false;
+      _status = 'Automatic detection off';
+    });
+  }
+
+  Future<void> _detectOnce() async {
+    try {
+      final p = await probeCard(timeout: 10);
+      if (!mounted) return;
+      final at = DateTime.now().toIso8601String().substring(11, 19);
+      setState(() {
+        _status = p.isValidDnie
+            ? 'DNIe detected at $at'
+            : 'Card detected at $at, but it is not a DNIe';
+        _result =
+            'ATR: ${p.atrHex}\n'
+            'Tag: ${p.tagId}';
+      });
+      await Future<void>.delayed(const Duration(seconds: 2));
+    } on DnieTimeoutError {
+      return;
+    } on DnieError catch (e) {
+      if (!mounted) return;
+      setState(() => _status = 'Error: ${e.message}');
+      await Future<void>.delayed(const Duration(seconds: 2));
+    }
+  }
 
   @override
   void initState() {
@@ -144,6 +189,7 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
 
   @override
   void dispose() {
+    _autoDetect = false;
     _canCtl.dispose();
     _pinCtl.dispose();
     super.dispose();
@@ -161,6 +207,26 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
             message: _nfc!.statusMessage,
           ),
         if (_nfc != null && !_nfc!.isReady) const SizedBox(height: 16),
+
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          secondary: const Icon(Icons.contactless),
+          title: const Text('Detect cards automatically'),
+          subtitle: Text(
+            _detecting && !_autoDetect
+                ? 'Stopping after the current scan...'
+                : 'Keeps NFC listening and reports every card it sees',
+          ),
+          value: _autoDetect,
+          onChanged: _busy ? null : (on) => unawaited(_setAutoDetect(on)),
+        ),
+        if (_detecting)
+          _StatusCard(
+            busy: false,
+            status: _status,
+            result: _result,
+          ),
+        const SizedBox(height: 8),
 
         SegmentedButton<DnieCertificateType>(
           segments: const [
@@ -204,7 +270,7 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
         // --- Basic ---
         const _Section(title: 'Basic Operations'),
         _Btn(
-          busy: _busy,
+          busy: _locked,
           icon: Icons.contactless,
           label: 'Probe Card',
           subtitle: 'No PIN required',
@@ -221,7 +287,7 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
           }),
         ),
         _Btn(
-          busy: _busy,
+          busy: _locked,
           icon: Icons.lock_open,
           label: 'Verify PIN',
           onPressed: () => _runValidated('Verifying...', () async {
@@ -237,7 +303,7 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
           }),
         ),
         _Btn(
-          busy: _busy,
+          busy: _locked,
           icon: Icons.nfc,
           label: 'Sign Data',
           onPressed: () => _runValidated('Signing...', () async {
@@ -256,7 +322,7 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
           }),
         ),
         _Btn(
-          busy: _busy,
+          busy: _locked,
           icon: Icons.badge,
           label: 'Read Certificate',
           onPressed: () => _runValidated('Reading cert...', () async {
@@ -274,7 +340,7 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
           }),
         ),
         _Btn(
-          busy: _busy,
+          busy: _locked,
           icon: Icons.info_outline,
           label: 'Certificate Details',
           onPressed: () => _runValidated('Reading details...', () async {
@@ -296,7 +362,7 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
           }),
         ),
         _Btn(
-          busy: _busy,
+          busy: _locked,
           icon: Icons.person,
           label: 'Personal Data',
           onPressed: () => _runValidated('Reading data...', () async {
@@ -322,7 +388,7 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
         // --- X.509 Parsing ---
         const _Section(title: 'X.509 Certificate Parser'),
         _Btn(
-          busy: _busy,
+          busy: _locked,
           icon: Icons.security,
           label: 'Parse Full X.509',
           subtitle: 'Read cert + parse all fields',
@@ -388,7 +454,7 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
         // --- Workflows ---
         const _Section(title: 'Workflows'),
         _Btn(
-          busy: _busy,
+          busy: _locked,
           icon: Icons.checklist,
           label: 'Check Readiness',
           subtitle: 'NFC + Probe + PIN',
@@ -410,7 +476,7 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
           }),
         ),
         _Btn(
-          busy: _busy,
+          busy: _locked,
           icon: Icons.perm_identity,
           label: 'Read Full Identity',
           subtitle: 'Personal + Certificate (2 taps)',
@@ -432,7 +498,7 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
           }),
         ),
         _Btn(
-          busy: _busy,
+          busy: _locked,
           icon: Icons.playlist_add_check,
           label: 'Probe + Sign',
           subtitle: 'Probe card then sign if valid',
@@ -461,7 +527,7 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
         // --- DnieSession ---
         const _Section(title: 'DnieSession'),
         _Btn(
-          busy: _busy,
+          busy: _locked,
           icon: Icons.play_circle,
           label: 'Session Demo',
           subtitle: 'Verify + Details + Personal',
@@ -501,11 +567,12 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
           label: const Text('Stop Scan'),
         ),
         const SizedBox(height: 24),
-        _StatusCard(
-          busy: _busy,
-          status: _status,
-          result: _result,
-        ),
+        if (!_detecting)
+          _StatusCard(
+            busy: _busy,
+            status: _status,
+            result: _result,
+          ),
       ],
     );
   }
