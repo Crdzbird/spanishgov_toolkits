@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 
 /// {@template signed_data}
@@ -22,31 +20,6 @@ final class SignedData {
     required this.signedDataBase64,
     required this.certificate,
   });
-
-  /// Creates a [SignedData] from a map returned by the native platform.
-  ///
-  /// Expected keys: `signedData` (List of int), `base64signedData` (String),
-  /// `base64certificate` (String).
-  factory SignedData.fromMap(Map<String, dynamic> map) {
-    final rawBytes = map['signedData'];
-    final bytes = switch (rawBytes) {
-      final Uint8List b => b,
-      final List<dynamic> b => Uint8List.fromList(b.cast<int>()),
-      _ => Uint8List(0),
-    };
-
-    return SignedData(
-      signedData: bytes,
-      signedDataBase64: map['base64signedData'] as String? ?? '',
-      certificate: map['base64certificate'] as String? ?? '',
-    );
-  }
-
-  /// Creates a [SignedData] from a JSON string.
-  factory SignedData.fromJson(String json) {
-    final map = jsonDecode(json) as Map<String, dynamic>;
-    return SignedData.fromMap(map);
-  }
 
   /// The raw signed bytes.
   final Uint8List signedData;

@@ -53,6 +53,10 @@ final class CertificateInfo {
   /// the device clock on the native side.
   final bool isCurrentlyValid;
 
+  /// Whether [moment] falls within the validity period, bounds included.
+  bool isValidAt(DateTime moment) =>
+      !moment.isBefore(notValidBefore) && !moment.isAfter(notValidAfter);
+
   /// Whether the certificate has expired.
   bool get isExpired => DateTime.now().isAfter(notValidAfter);
 

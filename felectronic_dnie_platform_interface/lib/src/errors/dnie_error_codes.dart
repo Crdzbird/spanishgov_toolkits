@@ -22,13 +22,7 @@ DnieError _fromPlatformException(PlatformException exception) =>
       ),
     };
 
-int _parseRetries(String? message) {
-  if (message == null) return -1;
-  final match = RegExp(r'(\d+)').firstMatch(message);
-  if (match == null) return -1;
-  try {
-    return int.parse(match.group(1)!);
-  } on FormatException {
-    return -1;
-  }
+int? _parseRetries(String? message) {
+  final digits = RegExp(r'\d+').firstMatch(message ?? '')?.group(0);
+  return digits == null ? null : int.tryParse(digits);
 }

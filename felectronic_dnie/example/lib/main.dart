@@ -165,7 +165,7 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
       await fn();
     } on DnieError catch (e) {
       var m = 'Error: ${e.message}';
-      if (e is DnieWrongPinError && e.remainingRetries >= 0) {
+      if (e is DnieWrongPinError && e.remainingRetries != null) {
         m = '$m (${e.remainingRetries} retries left)';
       }
       setState(() {

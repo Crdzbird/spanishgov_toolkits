@@ -10,9 +10,8 @@ extension CertificateInfoX on CertificateInfo {
   /// Whether the certificate expires within 30 days.
   bool get isExpiringSoon => !isExpired && daysUntilExpiry <= 30;
 
-  /// Whether the certificate is currently valid for signing.
-  bool get isValidForSigning =>
-      isCurrentlyValid && !isExpired && !isNotYetValid;
+  /// Whether the certificate can sign right now.
+  bool get isValidForSigning => isValidAt(DateTime.now());
 
   /// The structured expiry status as an enum value.
   CertificateExpiryStatus get expiryStatusType {
@@ -25,10 +24,5 @@ extension CertificateInfoX on CertificateInfo {
   }
 
   /// Human-readable expiry status string.
-  String get expiryStatus {
-    final type = expiryStatusType;
-    return type == CertificateExpiryStatus.valid
-        ? type.withDays(daysUntilExpiry)
-        : type.message;
-  }
+  String get expiryStatus => expiryStatusType.describe(daysUntilExpiry);
 }

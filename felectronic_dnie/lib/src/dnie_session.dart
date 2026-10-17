@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:felectronic_dnie/src/dnie_operations.dart' as dnie;
 import 'package:felectronic_dnie_platform_interface/felectronic_dnie_platform_interface.dart';
 
 /// {@template dnie_session}
@@ -27,7 +28,7 @@ final class DnieSession {
   }) {
     final error = can.validateCan() ?? pin.validatePin();
     if (error != null) throw ArgumentError(error.message);
-    return DnieSession._(can.trim(), pin.trim(), certificateType, timeout);
+    return DnieSession._(can, pin, certificateType, timeout);
   }
 
   const DnieSession._(this._can, this._pin, this.certificateType, this.timeout);
@@ -41,10 +42,8 @@ final class DnieSession {
   /// How long to wait for a card.
   final Duration timeout;
 
-  FelectronicDniePlatform get _platform => FelectronicDniePlatform.instance;
-
   /// Signs [data] using the DNIe.
-  Future<SignedData> sign(Uint8List data) => _platform.sign(
+  Future<SignedData> sign(Uint8List data) => dnie.sign(
     data: data,
     can: _can,
     pin: _pin,
@@ -53,7 +52,7 @@ final class DnieSession {
   );
 
   /// Reads the raw certificate.
-  Future<SignedData> readCertificate() => _platform.readCertificate(
+  Future<SignedData> readCertificate() => dnie.readCertificate(
     can: _can,
     pin: _pin,
     timeout: timeout,
@@ -61,16 +60,15 @@ final class DnieSession {
   );
 
   /// Reads parsed certificate details.
-  Future<CertificateInfo> certificateDetails() =>
-      _platform.readCertificateDetails(
-        can: _can,
-        pin: _pin,
-        timeout: timeout,
-        certificateType: certificateType,
-      );
+  Future<CertificateInfo> certificateDetails() => dnie.readCertificateDetails(
+    can: _can,
+    pin: _pin,
+    timeout: timeout,
+    certificateType: certificateType,
+  );
 
   /// Reads personal data from the certificate.
-  Future<PersonalData> personalData() => _platform.readPersonalData(
+  Future<PersonalData> personalData() => dnie.readPersonalData(
     can: _can,
     pin: _pin,
     timeout: timeout,
@@ -78,7 +76,7 @@ final class DnieSession {
   );
 
   /// Verifies that CAN and PIN are correct.
-  Future<void> verifyCredentials() => _platform.verifyPin(
+  Future<void> verifyCredentials() => dnie.verifyPin(
     can: _can,
     pin: _pin,
     timeout: timeout,
@@ -86,5 +84,5 @@ final class DnieSession {
   );
 
   /// Stops an in-progress NFC operation.
-  Future<void> stop() => _platform.stopSign();
+  Future<void> stop() => dnie.stopSign();
 }

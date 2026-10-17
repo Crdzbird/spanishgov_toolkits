@@ -3,34 +3,27 @@
 /// {@endtemplate}
 enum CertificateExpiryStatus {
   /// Certificate validity period has not started yet.
-  notYetValid('Not yet valid'),
+  notYetValid,
 
   /// Certificate has expired.
-  expired('Expired'),
+  expired,
 
   /// Certificate expires today.
-  expiresToday('Expires today'),
+  expiresToday,
 
   /// Certificate expires tomorrow.
-  expiresTomorrow('Expires tomorrow'),
+  expiresTomorrow,
 
-  /// Certificate is valid with days remaining.
-  ///
-  /// Use [withDays] to get a formatted message.
-  valid('');
+  /// Certificate is valid with more than a day remaining.
+  valid;
 
-  /// {@macro certificate_expiry_status}
-  const CertificateExpiryStatus(this.message);
-
-  /// Human-readable status message.
-  ///
-  /// For [valid], use [withDays] instead.
-  final String message;
-
-  /// Returns a formatted message for [valid] status with the number of days.
-  String withDays(int days) =>
-      this == valid ? 'Expires in $days days' : message;
-
-  @override
-  String toString() => message;
+  /// A short English description of this status, using [daysLeft] for
+  /// [valid].
+  String describe(int daysLeft) => switch (this) {
+    notYetValid => 'Not yet valid',
+    expired => 'Expired',
+    expiresToday => 'Expires today',
+    expiresTomorrow => 'Expires tomorrow',
+    valid => 'Expires in $daysLeft days',
+  };
 }

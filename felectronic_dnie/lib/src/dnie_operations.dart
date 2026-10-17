@@ -5,6 +5,8 @@ import 'package:felectronic_dnie_platform_interface/felectronic_dnie_platform_in
 FelectronicDniePlatform get _platform => FelectronicDniePlatform.instance;
 
 /// Signs [data] using the DNIe private key via NFC.
+///
+/// Every operation here ignores whitespace around [can] and [pin].
 Future<SignedData> sign({
   required Uint8List data,
   required String can,
@@ -13,8 +15,8 @@ Future<SignedData> sign({
   DnieCertificateType certificateType = DnieCertificateType.sign,
 }) => _platform.sign(
   data: data,
-  can: can,
-  pin: pin,
+  can: can.trim(),
+  pin: pin.trim(),
   timeout: timeout,
   certificateType: certificateType,
 );
@@ -29,8 +31,8 @@ Future<SignedData> readCertificate({
   Duration timeout = dnieDefaultTimeout,
   DnieCertificateType certificateType = DnieCertificateType.sign,
 }) => _platform.readCertificate(
-  can: can,
-  pin: pin,
+  can: can.trim(),
+  pin: pin.trim(),
   timeout: timeout,
   certificateType: certificateType,
 );
@@ -46,8 +48,8 @@ Future<CertificateInfo> readCertificateDetails({
   Duration timeout = dnieDefaultTimeout,
   DnieCertificateType certificateType = DnieCertificateType.sign,
 }) => _platform.readCertificateDetails(
-  can: can,
-  pin: pin,
+  can: can.trim(),
+  pin: pin.trim(),
   timeout: timeout,
   certificateType: certificateType,
 );
@@ -59,8 +61,8 @@ Future<PersonalData> readPersonalData({
   Duration timeout = dnieDefaultTimeout,
   DnieCertificateType certificateType = DnieCertificateType.sign,
 }) => _platform.readPersonalData(
-  can: can,
-  pin: pin,
+  can: can.trim(),
+  pin: pin.trim(),
   timeout: timeout,
   certificateType: certificateType,
 );
@@ -72,8 +74,8 @@ Future<void> verifyPin({
   Duration timeout = dnieDefaultTimeout,
   DnieCertificateType certificateType = DnieCertificateType.sign,
 }) => _platform.verifyPin(
-  can: can,
-  pin: pin,
+  can: can.trim(),
+  pin: pin.trim(),
   timeout: timeout,
   certificateType: certificateType,
 );
