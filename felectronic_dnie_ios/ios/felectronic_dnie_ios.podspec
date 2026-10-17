@@ -42,14 +42,14 @@ ensure_jre_runtime.call(File.join(__dir__, 'Frameworks'))
 
 Pod::Spec.new do |s|
   s.name             = 'felectronic_dnie_ios'
-  s.version          = '1.0.0'
+  s.version          = '2.0.0'
   s.summary          = 'iOS implementation of the felectronic_dnie plugin.'
   s.description      = <<-DESC
 iOS implementation for reading and signing with Spanish electronic DNIe
 (Documento Nacional de Identidad electrónico) via NFC.
                        DESC
   s.homepage         = 'https://github.com/Crdzbird/spanishgov_toolkits'
-  s.license          = { :type => 'BSD', :file => '../LICENSE' }
+  s.license          = { :type => 'MIT', :file => '../LICENSE' }
   s.author           = { 'crdzbird' => 'luisalfonsocb83@gmail.com' }
   s.source           = { :path => '.' }
 
