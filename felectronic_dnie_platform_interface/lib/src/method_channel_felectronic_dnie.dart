@@ -1,9 +1,17 @@
 import 'package:felectronic_dnie_platform_interface/felectronic_dnie_platform_interface.dart';
+import 'package:felectronic_dnie_platform_interface/src/mappers/card_probe_message_mapper.dart';
+import 'package:felectronic_dnie_platform_interface/src/mappers/certificate_details_message_mapper.dart';
+import 'package:felectronic_dnie_platform_interface/src/mappers/nfc_status_message_mapper.dart';
+import 'package:felectronic_dnie_platform_interface/src/mappers/personal_data_message_mapper.dart';
+import 'package:felectronic_dnie_platform_interface/src/mappers/signed_data_message_mapper.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 
 /// An implementation of [FelectronicDniePlatform] that uses Pigeon-generated
 /// type-safe bindings to communicate with the native platform.
+///
+/// The Android and iOS plugins share one Pigeon API, so both extend this
+/// class and only register themselves.
 class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
   /// The Pigeon-generated host API used to communicate with native code.
   @visibleForTesting
@@ -24,16 +32,15 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
     required String pin,
     int timeout = 30,
     DnieCertificateType certificateType = DnieCertificateType.sign,
-  }) => _guard(() async {
-    final result = await api.sign(
+  }) => _guard(
+    () async => (await api.sign(
       data,
       can,
       pin,
       timeout,
       certificateType.value,
-    );
-    return _toSignedData(result);
-  });
+    )).toModel(),
+  );
 
   @override
   Future<void> stopSign() => _guard(api.stopSign);
@@ -44,25 +51,18 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
     required String pin,
     int timeout = 30,
     DnieCertificateType certificateType = DnieCertificateType.sign,
-  }) => _guard(() async {
-    final result = await api.readCertificate(
+  }) => _guard(
+    () async => (await api.readCertificate(
       can,
       pin,
       timeout,
       certificateType.value,
-    );
-    return _toSignedData(result);
-  });
+    )).toModel(),
+  );
 
   @override
-  Future<CardProbeResult> probeCard({int timeout = 30}) => _guard(() async {
-    final result = await api.probeCard(timeout);
-    return CardProbeResult(
-      isValidDnie: result.isValidDnie,
-      atrHex: result.atrHex,
-      tagId: result.tagId,
-    );
-  });
+  Future<CardProbeResult> probeCard({int timeout = 30}) =>
+      _guard(() async => (await api.probeCard(timeout)).toModel());
 
   @override
   Future<CertificateInfo> readCertificateDetails({
@@ -70,15 +70,14 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
     required String pin,
     int timeout = 30,
     DnieCertificateType certificateType = DnieCertificateType.sign,
-  }) => _guard(() async {
-    final result = await api.readCertificateDetails(
+  }) => _guard(
+    () async => (await api.readCertificateDetails(
       can,
       pin,
       timeout,
       certificateType.value,
-    );
-    return _toCertificateInfo(result);
-  });
+    )).toModel(),
+  );
 
   @override
   Future<PersonalData> readPersonalData({
@@ -86,22 +85,14 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
     required String pin,
     int timeout = 30,
     DnieCertificateType certificateType = DnieCertificateType.sign,
-  }) => _guard(() async {
-    final result = await api.readPersonalData(
+  }) => _guard(
+    () async => (await api.readPersonalData(
       can,
       pin,
       timeout,
       certificateType.value,
-    );
-    return PersonalData(
-      fullName: result.fullName,
-      givenName: result.givenName,
-      surnames: result.surnames,
-      nif: result.nif,
-      country: result.country,
-      certificateType: result.certificateType,
-    );
-  });
+    )).toModel(),
+  );
 
   @override
   Future<void> verifyPin({
@@ -112,29 +103,6 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
   }) => _guard(() => api.verifyPin(can, pin, timeout, certificateType.value));
 
   @override
-  Future<NfcStatus> checkNfcAvailability() => _guard(() async {
-    final result = await api.checkNfcAvailability();
-    return NfcStatus(
-      isAvailable: result.isAvailable,
-      isEnabled: result.isEnabled,
-    );
-  });
-
-  SignedData _toSignedData(DnieSignedDataMessage message) => SignedData(
-    signedData: message.signedData,
-    signedDataBase64: message.signedDataBase64,
-    certificate: message.certificate,
-  );
-
-  CertificateInfo _toCertificateInfo(DnieCertificateDetailsMessage msg) =>
-      CertificateInfo(
-        subjectCommonName: msg.subjectCommonName,
-        subjectSerialNumber: msg.subjectSerialNumber,
-        issuerCommonName: msg.issuerCommonName,
-        issuerOrganization: msg.issuerOrganization,
-        notValidBefore: DateTime.fromMillisecondsSinceEpoch(msg.notValidBefore),
-        notValidAfter: DateTime.fromMillisecondsSinceEpoch(msg.notValidAfter),
-        serialNumber: msg.serialNumber,
-        isCurrentlyValid: msg.isCurrentlyValid,
-      );
+  Future<NfcStatus> checkNfcAvailability() =>
+      _guard(() async => (await api.checkNfcAvailability()).toModel());
 }

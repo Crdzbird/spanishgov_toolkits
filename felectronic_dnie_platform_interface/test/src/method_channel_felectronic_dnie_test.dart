@@ -1,5 +1,4 @@
 import 'package:felectronic_dnie_platform_interface/felectronic_dnie_platform_interface.dart';
-import 'package:felectronic_dnie_platform_interface/src/method_channel_felectronic_dnie.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 

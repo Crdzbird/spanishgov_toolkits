@@ -14,6 +14,7 @@ export 'package:felectronic_x509/felectronic_x509.dart';
 
 export 'src/errors/dnie_error.dart';
 export 'src/generated/messages.g.dart';
+export 'src/method_channel_felectronic_dnie.dart';
 export 'src/models/card_probe_result.dart';
 export 'src/models/certificate_info.dart';
 export 'src/models/dnie_certificate_type.dart';
