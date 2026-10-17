@@ -168,6 +168,9 @@ class _DnieTabState extends State<_DnieTab> with AutomaticKeepAliveClientMixin {
       if (e is DnieWrongPinError && e.remainingRetries != null) {
         m = '$m (${e.remainingRetries} retries left)';
       }
+      if (e is DnieWrongPinError && e.isLastAttempt) {
+        m = '$m One more wrong PIN locks the card.';
+      }
       setState(() {
         _status = m;
         _result = '';

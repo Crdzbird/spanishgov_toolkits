@@ -1,7 +1,14 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:felectronic_dnie/src/dnie_operations.dart' as dnie;
+import 'package:felectronic_dnie/src/workflows/dnie_identity.dart';
+import 'package:felectronic_dnie/src/workflows/dnie_readiness.dart';
+import 'package:felectronic_dnie/src/workflows/dnie_workflows.dart'
+    as workflows;
 import 'package:felectronic_dnie_platform_interface/felectronic_dnie_platform_interface.dart';
+
+part 'dnie_session_shorthand.dart';
 
 /// {@template dnie_session}
 /// A session that stores CAN and PIN once, providing shorthand
@@ -9,8 +16,9 @@ import 'package:felectronic_dnie_platform_interface/felectronic_dnie_platform_in
 ///
 /// ```dart
 /// final session = DnieSession(can: '123456', pin: 'mySecurePin');
-/// final signed = await session.sign(data);
+/// final signed = await session.signText('Hello, DNIe!');
 /// final identity = await session.readFullIdentity();
+/// final login = await session.auth.readCertificate();
 /// await session.stop();
 /// ```
 ///

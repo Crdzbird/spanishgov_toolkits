@@ -18,4 +18,10 @@ enum DnieCertificateType {
 
   /// The string value sent to the native platform (`'SIGN'` or `'AUTH'`).
   final String value;
+
+  /// The type whose [value] is [value], ignoring case, or `null` if none is.
+  static DnieCertificateType? fromValue(String value) {
+    final upper = value.trim().toUpperCase();
+    return values.where((type) => type.value == upper).firstOrNull;
+  }
 }

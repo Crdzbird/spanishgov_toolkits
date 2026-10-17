@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:felectronic_dnie_platform_interface/src/models/signed_data.dart';
 import 'package:felectronic_x509/felectronic_x509.dart';
 
@@ -14,6 +17,17 @@ extension SignedDataX on SignedData {
 
   /// The size of the signature in bytes.
   int get signatureSizeBytes => signedData.length;
+
+  /// The DER bytes of [certificate], or `null` if it is empty or not valid
+  /// Base64.
+  Uint8List? get certificateDer {
+    if (certificate.isEmpty) return null;
+    try {
+      return base64Decode(certificate);
+    } on FormatException {
+      return null;
+    }
+  }
 
   /// Parses the full X.509 certificate from the base64-encoded
   /// [certificate] string.

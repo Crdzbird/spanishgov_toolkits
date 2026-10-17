@@ -10,6 +10,8 @@ import 'package:felectronic_dnie_platform_interface/src/models/dnie_validation_e
 /// ```
 extension DnieStringValidators on String {
   static final _digits = RegExp(r'^\d+$');
+  static final _nif = RegExp(r'^([XYZ]?)(\d{7,8})([A-Z])$');
+  static const _nifLetters = 'TRWAGMYFPDXBNJZSQVHLCKE';
 
   /// Whether this string is a valid 6-digit CAN.
   bool get isValidCan => validateCan() == null;
@@ -33,5 +35,17 @@ extension DnieStringValidators on String {
     if (pin.length < 8) return DnieValidationError.pinTooShort;
     if (pin.length > 16) return DnieValidationError.pinTooLong;
     return null;
+  }
+
+  /// Whether this is a NIF (8 digits and a letter) or NIE (X, Y or Z, 7
+  /// digits and a letter) whose control letter matches its number.
+  bool get isValidNif {
+    final match = _nif.firstMatch(trim().toUpperCase());
+    if (match == null) return false;
+    final prefix = match.group(1)!;
+    final digits = match.group(2)!;
+    if (digits.length != (prefix.isEmpty ? 8 : 7)) return false;
+    final lead = prefix.isEmpty ? '' : '${'XYZ'.indexOf(prefix)}';
+    return _nifLetters[int.parse('$lead$digits') % 23] == match.group(3);
   }
 }

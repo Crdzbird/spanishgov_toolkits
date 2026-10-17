@@ -29,4 +29,20 @@ void main() {
       expect(('a' * 17).validatePin(), DnieValidationError.pinTooLong);
     });
   });
+
+  group('isValidNif', () {
+    test('accepts a NIF and NIEs whose control letter matches', () {
+      expect('12345678Z'.isValidNif, isTrue);
+      expect('x1234567l'.isValidNif, isTrue);
+      expect(' Y1234567X '.isValidNif, isTrue);
+      expect('Z7654321H'.isValidNif, isTrue);
+    });
+
+    test('rejects a wrong letter or a malformed number', () {
+      expect('12345678A'.isValidNif, isFalse);
+      expect('X12345678L'.isValidNif, isFalse);
+      expect('1234567Z'.isValidNif, isFalse);
+      expect(''.isValidNif, isFalse);
+    });
+  });
 }

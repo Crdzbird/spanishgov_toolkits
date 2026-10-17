@@ -3,9 +3,12 @@ import 'package:felectronic_dnie_platform_interface/src/models/certificate_info.
 
 /// Convenience extensions on [CertificateInfo].
 extension CertificateInfoX on CertificateInfo {
+  /// Time left until the certificate expires; negative once it has.
+  Duration get remaining => notValidAfter.difference(DateTime.now());
+
   /// Days remaining until the certificate expires.
   /// Negative if already expired.
-  int get daysUntilExpiry => notValidAfter.difference(DateTime.now()).inDays;
+  int get daysUntilExpiry => remaining.inDays;
 
   /// Whether the certificate expires within 30 days.
   bool get isExpiringSoon => !isExpired && daysUntilExpiry <= 30;
