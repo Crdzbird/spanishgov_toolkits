@@ -6,9 +6,15 @@ import 'package:flutter/foundation.dart';
 /// This operation does not require CAN or PIN authentication.
 /// {@endtemplate}
 @immutable
-class CardProbeResult {
+final class CardProbeResult {
   /// {@macro card_probe_result}
-  const CardProbeResult({
+  const factory CardProbeResult({
+    required bool isValidDnie,
+    required String atrHex,
+    required String tagId,
+  }) = CardProbeResult._;
+
+  const CardProbeResult._({
     required this.isValidDnie,
     required this.atrHex,
     required this.tagId,
@@ -17,28 +23,28 @@ class CardProbeResult {
   /// Whether the detected card is a valid Spanish DNIe.
   final bool isValidDnie;
 
-  /// Historical bytes (ATR) from the card as a hex string.
+  /// The card's answer-to-select bytes as a hex string.
+  ///
+  /// For a DNIe this is the ISO 14443 Type B application data, which
+  /// contains the marker `E1F35E11`.
   final String atrHex;
 
-  /// Tag UID / identifier as a hex string.
+  /// Tag UID as a hex string.
+  ///
+  /// A DNIe answers with a random UID, so this changes on every read.
   final String tagId;
+
+  (bool, String, String) get _fields => (isValidDnie, atrHex, tagId);
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is CardProbeResult &&
-          other.isValidDnie == isValidDnie &&
-          other.atrHex == atrHex &&
-          other.tagId == tagId;
+      other is CardProbeResult && other._fields == _fields;
 
   @override
-  int get hashCode => Object.hash(isValidDnie, atrHex, tagId);
+  int get hashCode => _fields.hashCode;
 
   @override
   String toString() =>
-      'CardProbeResult('
-      'isValidDnie: $isValidDnie, '
-      'atrHex: $atrHex, '
-      'tagId: $tagId'
-      ')';
+      'CardProbeResult(isValidDnie: $isValidDnie, '
+      'atrHex: $atrHex, tagId: $tagId)';
 }

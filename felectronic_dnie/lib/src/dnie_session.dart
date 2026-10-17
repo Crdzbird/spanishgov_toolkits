@@ -15,22 +15,22 @@ import 'package:felectronic_dnie_platform_interface/felectronic_dnie_platform_in
 ///
 /// Validates CAN and PIN format on construction.
 /// {@endtemplate}
-class DnieSession {
+final class DnieSession {
   /// {@macro dnie_session}
   ///
   /// Throws [ArgumentError] if [can] or [pin] format is invalid.
-  DnieSession({
+  factory DnieSession({
     required String can,
     required String pin,
-    this.certificateType = DnieCertificateType.sign,
-    this.timeout = 30,
-  }) : _can = can.trim(),
-       _pin = pin.trim() {
-    final canError = _can.validateCan();
-    if (canError != null) throw ArgumentError(canError.message);
-    final pinError = _pin.validatePin();
-    if (pinError != null) throw ArgumentError(pinError.message);
+    DnieCertificateType certificateType = DnieCertificateType.sign,
+    int timeout = 30,
+  }) {
+    final error = can.validateCan() ?? pin.validatePin();
+    if (error != null) throw ArgumentError(error.message);
+    return DnieSession._(can.trim(), pin.trim(), certificateType, timeout);
   }
+
+  const DnieSession._(this._can, this._pin, this.certificateType, this.timeout);
 
   final String _can;
   final String _pin;

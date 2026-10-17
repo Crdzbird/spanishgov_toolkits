@@ -9,9 +9,15 @@ import 'package:flutter/foundation.dart';
 /// and the signing certificate.
 /// {@endtemplate}
 @immutable
-class SignedData {
+final class SignedData {
   /// {@macro signed_data}
-  const SignedData({
+  const factory SignedData({
+    required Uint8List signedData,
+    required String signedDataBase64,
+    required String certificate,
+  }) = SignedData._;
+
+  const SignedData._({
     required this.signedData,
     required this.signedDataBase64,
     required this.certificate,

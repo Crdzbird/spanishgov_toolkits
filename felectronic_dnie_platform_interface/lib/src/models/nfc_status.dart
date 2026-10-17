@@ -7,12 +7,14 @@ import 'package:flutter/foundation.dart';
 /// and [isEnabled] to check if NFC is turned on in system settings.
 /// {@endtemplate}
 @immutable
-class NfcStatus {
+final class NfcStatus {
   /// {@macro nfc_status}
-  const NfcStatus({
-    required this.isAvailable,
-    required this.isEnabled,
-  });
+  const factory NfcStatus({
+    required bool isAvailable,
+    required bool isEnabled,
+  }) = NfcStatus._;
+
+  const NfcStatus._({required this.isAvailable, required this.isEnabled});
 
   /// Whether the device has NFC hardware.
   final bool isAvailable;
@@ -25,18 +27,14 @@ class NfcStatus {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
       other is NfcStatus &&
-          other.isAvailable == isAvailable &&
-          other.isEnabled == isEnabled;
+      other.isAvailable == isAvailable &&
+      other.isEnabled == isEnabled;
 
   @override
   int get hashCode => Object.hash(isAvailable, isEnabled);
 
   @override
   String toString() =>
-      'NfcStatus('
-      'isAvailable: $isAvailable, '
-      'isEnabled: $isEnabled'
-      ')';
+      'NfcStatus(isAvailable: $isAvailable, isEnabled: $isEnabled)';
 }

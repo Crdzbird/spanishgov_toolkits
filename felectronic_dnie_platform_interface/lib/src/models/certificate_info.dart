@@ -4,9 +4,20 @@ import 'package:flutter/foundation.dart';
 /// Parsed X.509 certificate details from the DNIe.
 /// {@endtemplate}
 @immutable
-class CertificateInfo {
+final class CertificateInfo {
   /// {@macro certificate_info}
-  const CertificateInfo({
+  const factory CertificateInfo({
+    required String subjectCommonName,
+    required String subjectSerialNumber,
+    required String issuerCommonName,
+    required String issuerOrganization,
+    required DateTime notValidBefore,
+    required DateTime notValidAfter,
+    required String serialNumber,
+    required bool isCurrentlyValid,
+  }) = CertificateInfo._;
+
+  const CertificateInfo._({
     required this.subjectCommonName,
     required this.subjectSerialNumber,
     required this.issuerCommonName,
@@ -20,7 +31,7 @@ class CertificateInfo {
   /// Subject common name (e.g. "APELLIDO1 APELLIDO2, NOMBRE (FIRMA)").
   final String subjectCommonName;
 
-  /// Subject serial number — the NIF (e.g. "12345678Z").
+  /// Subject serial number, which is the NIF (e.g. "12345678Z").
   final String subjectSerialNumber;
 
   /// Issuer common name.
@@ -38,7 +49,8 @@ class CertificateInfo {
   /// Certificate serial number as hex string.
   final String serialNumber;
 
-  /// Whether the certificate is currently valid.
+  /// Whether the certificate was valid when the card was read, as judged by
+  /// the device clock on the native side.
   final bool isCurrentlyValid;
 
   /// Whether the certificate has expired.
@@ -47,21 +59,7 @@ class CertificateInfo {
   /// Whether the certificate is not yet valid.
   bool get isNotYetValid => DateTime.now().isBefore(notValidBefore);
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is CertificateInfo &&
-          other.subjectCommonName == subjectCommonName &&
-          other.subjectSerialNumber == subjectSerialNumber &&
-          other.issuerCommonName == issuerCommonName &&
-          other.issuerOrganization == issuerOrganization &&
-          other.notValidBefore == notValidBefore &&
-          other.notValidAfter == notValidAfter &&
-          other.serialNumber == serialNumber &&
-          other.isCurrentlyValid == isCurrentlyValid;
-
-  @override
-  int get hashCode => Object.hash(
+  Record get _fields => (
     subjectCommonName,
     subjectSerialNumber,
     issuerCommonName,
@@ -73,11 +71,15 @@ class CertificateInfo {
   );
 
   @override
+  bool operator ==(Object other) =>
+      other is CertificateInfo && other._fields == _fields;
+
+  @override
+  int get hashCode => _fields.hashCode;
+
+  @override
   String toString() =>
-      'CertificateInfo('
-      'subject: $subjectCommonName, '
-      'nif: $subjectSerialNumber, '
-      'valid: $isCurrentlyValid, '
-      'expires: $notValidAfter'
-      ')';
+      'CertificateInfo(subject: $subjectCommonName, '
+      'nif: $subjectSerialNumber, valid: $isCurrentlyValid, '
+      'expires: $notValidAfter)';
 }

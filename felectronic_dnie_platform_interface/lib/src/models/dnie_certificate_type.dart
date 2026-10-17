@@ -2,15 +2,15 @@
 /// The type of certificate to use on the DNIe.
 ///
 /// The Spanish electronic DNIe contains two certificates:
-/// - [sign] (FIRMA) — for non-repudiation digital signatures.
-/// - [auth] (AUTENTICACION) — for identity authentication
-///   (e.g. Cl@ve, Sede Electrónica).
+/// - [sign] (FIRMA), for non-repudiation digital signatures.
+/// - [auth] (AUTENTICACION), for identity authentication
+///   (e.g. Cl@ve, Sede Electronica).
 /// {@endtemplate}
 enum DnieCertificateType {
-  /// Signing certificate (FIRMA) — for non-repudiation signatures.
+  /// Signing certificate (FIRMA), for non-repudiation signatures.
   sign('SIGN'),
 
-  /// Authentication certificate (AUTENTICACION) — for identity verification.
+  /// Authentication certificate (AUTENTICACION), for identity verification.
   auth('AUTH');
 
   /// {@macro dnie_certificate_type}

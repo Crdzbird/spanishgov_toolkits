@@ -4,9 +4,18 @@ import 'package:flutter/foundation.dart';
 /// Personal data extracted from the DNIe certificate subject DN.
 /// {@endtemplate}
 @immutable
-class PersonalData {
+final class PersonalData {
   /// {@macro personal_data}
-  const PersonalData({
+  const factory PersonalData({
+    required String fullName,
+    required String givenName,
+    required String surnames,
+    required String nif,
+    required String country,
+    required String certificateType,
+  }) = PersonalData._;
+
+  const PersonalData._({
     required this.fullName,
     required this.givenName,
     required this.surnames,
@@ -15,13 +24,13 @@ class PersonalData {
     required this.certificateType,
   });
 
-  /// Full name (given name + surnames).
+  /// Full name (given name and surnames), as printed in the certificate.
   final String fullName;
 
   /// Given name / first name.
   final String givenName;
 
-  /// Surnames (first + second).
+  /// Surnames (first and second).
   final String surnames;
 
   /// NIF (Numero de Identificacion Fiscal).
@@ -33,32 +42,17 @@ class PersonalData {
   /// Certificate type (e.g. "FIRMA", "AUTENTICACION").
   final String certificateType;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is PersonalData &&
-          other.fullName == fullName &&
-          other.givenName == givenName &&
-          other.surnames == surnames &&
-          other.nif == nif &&
-          other.country == country &&
-          other.certificateType == certificateType;
+  (String, String, String, String, String, String) get _fields =>
+      (fullName, givenName, surnames, nif, country, certificateType);
 
   @override
-  int get hashCode => Object.hash(
-    fullName,
-    givenName,
-    surnames,
-    nif,
-    country,
-    certificateType,
-  );
+  bool operator ==(Object other) =>
+      other is PersonalData && other._fields == _fields;
+
+  @override
+  int get hashCode => _fields.hashCode;
 
   @override
   String toString() =>
-      'PersonalData('
-      'name: $fullName, '
-      'nif: $nif, '
-      'type: $certificateType'
-      ')';
+      'PersonalData(name: $fullName, nif: $nif, type: $certificateType)';
 }
