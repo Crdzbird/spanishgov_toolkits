@@ -9,7 +9,7 @@
   requested certificate, returning the raw PKCS#1 v1.5 signature (SHA-512 with
   RSA) and the certificate as standard Base64 DER, the same shape iOS returns.
   Nothing is sent over the network. Before, the data and the certificate chain
-  went to `firmamovil-appfactory.redsara.es` and the result was CAdES.
+  went to `https://firmamovil-appfactory.redsara.es` and the result was CAdES.
 - With NFC switched off, or on a device without NFC, every operation fails at
   once with `DSNfcUnavailableException` (`DnieNfcUnavailableError`) instead of
   waiting for the timeout.
