@@ -13,6 +13,10 @@
 - With NFC switched off, or on a device without NFC, every operation fails at
   once with `DSNfcUnavailableException` (`DnieNfcUnavailableError`) instead of
   waiting for the timeout.
+- Requires Flutter 3.44 and Dart 3.12. The plugin no longer applies the
+  Kotlin Gradle Plugin: it uses built-in Kotlin, as Flutter asks plugins to,
+  so apps stop warning about it and keep building once Flutter refuses
+  plugins that apply it. Apps with built-in Kotlin on or off both build.
 
 ### Added
 

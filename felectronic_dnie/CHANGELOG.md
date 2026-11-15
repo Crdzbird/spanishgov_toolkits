@@ -13,6 +13,8 @@ See "Migrating from 2.x" in the README.
 - Requires the 3.0.0 platform interface and implementations, which add
   `DnieNfcUnavailableError` and `DnieUnsupportedError` to the sealed
   `DnieError`.
+- Requires Flutter 3.44 and Dart 3.12, the minimum for the Android
+  implementation now that it uses built-in Kotlin.
 
 ### Added
 
