@@ -11,8 +11,8 @@ topics:
   - android
 
 environment:
-  flutter: ">=3.22.0"
-  sdk: ^3.11.0
+  flutter: ">=3.44.0"
+  sdk: ^3.12.0
 
 # Part of the pub workspace declared in the repository root pubspec.yaml.
 resolution: workspace
