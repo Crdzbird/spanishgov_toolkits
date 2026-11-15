@@ -1,5 +1,25 @@
 # Changelog
 
+## 3.0.0
+
+See "Migrating from 2.x" in the README.
+
+### Breaking changes
+
+- `sign` signs on the phone on Android too, and returns the raw PKCS#1 v1.5
+  signature, SHA-512 with RSA, with the certificate as standard Base64 DER. It
+  used to send the data and the certificate chain to the remote three-phase
+  service and return CAdES. iOS already signed on the phone.
+- Requires the 3.0.0 platform interface and implementations, which add
+  `DnieNfcUnavailableError` and `DnieUnsupportedError` to the sealed
+  `DnieError`.
+
+### Added
+
+- `signCades` and `DnieSession.signCades`: the CAdES signature `sign` used to
+  return on Android, through the remote three-phase service. Android only; iOS
+  throws `DnieUnsupportedError`.
+
 ## 2.0.0
 
 See "Migrating from 1.x" in the README for the changes in one place.

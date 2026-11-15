@@ -9,6 +9,13 @@ The iOS implementation of [`felectronic_dnie`](https://github.com/Crdzbird/spani
 This package is [endorsed](https://flutter.dev/to/endorsed-federated-plugin) and
 will be automatically included when you depend on `felectronic_dnie`.
 
+## Signing
+
+`sign` signs on the phone and returns the raw PKCS#1 v1.5 signature, SHA-512
+with RSA, and the certificate as standard Base64 DER, the same as Android.
+`signCades`, the three-phase CAdES route, is Android only: here it throws
+`DnieUnsupportedError`.
+
 ## The j2objc runtime
 
 The pod links against the j2objc runtime, `JRE.xcframework`. At about 270 MB

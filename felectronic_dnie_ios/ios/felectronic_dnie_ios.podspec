@@ -42,7 +42,7 @@ ensure_jre_runtime.call(File.join(__dir__, 'Frameworks'))
 
 Pod::Spec.new do |s|
   s.name             = 'felectronic_dnie_ios'
-  s.version          = '2.0.0'
+  s.version          = '3.0.0'
   s.summary          = 'iOS implementation of the felectronic_dnie plugin.'
   s.description      = <<-DESC
 iOS implementation for reading and signing with Spanish electronic DNIe
