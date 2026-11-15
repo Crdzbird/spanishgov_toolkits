@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+- Raises the `pigeon` dev dependency to `^27.3.1`, so the package resolves and
+  its bindings can be regenerated on Flutter 3.50. `pigeon` is only used to
+  generate code; the published API and bindings are unchanged.
+
 ## 1.0.0
 
 - Pigeon-based type-safe platform interface for device certificate management.

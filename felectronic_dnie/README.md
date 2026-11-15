@@ -29,6 +29,9 @@ Nothing to add: the plugin declares the NFC permission itself. The card has to
 sit over the phone's NFC antenna, which on most phones is in the upper half of
 the back.
 
+Requires Flutter 3.44 or newer. The plugin uses built-in Kotlin, so it builds
+whether your app has `android.builtInKotlin` on or off.
+
 ### iOS
 
 Core NFC needs three things in the app, or no session will start:
@@ -243,6 +246,8 @@ try {
   throw `DnieTimeoutError`, and iOS threw `DnieProviderError`; both now throw
   `DnieNfcUnavailableError` at once.
 - A custom `FelectronicDniePlatform` must implement `signCades`.
+- Requires Flutter 3.44 and Dart 3.12, the minimum for a plugin that uses
+  built-in Kotlin instead of applying the Kotlin Gradle Plugin.
 
 ## Migrating from 1.x
 
