@@ -5,6 +5,7 @@ import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.util.Log
 import es.gob.electronic_dnie.utils.DSCancelledException
+import es.gob.electronic_dnie.utils.DSNfcUnavailableException
 import es.gob.electronic_dnie.utils.DSTimeoutException
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CoroutineScope
@@ -26,7 +27,8 @@ class NFCConnectionManager {
      * is cancelled, so a slow PACE handshake or signature is never cut off.
      * Exactly one of [onSuccess] or [onError] is called for the wait: a scan
      * that is cancelled, or replaced by a newer one, fails with
-     * [DSCancelledException].
+     * [DSCancelledException], and one on a device without NFC, or with NFC
+     * switched off, fails at once with [DSNfcUnavailableException].
      */
     fun startScan(
         activity: Activity?,
@@ -37,6 +39,11 @@ class NFCConnectionManager {
         waitingForCard.getAndSet(onError)?.invoke(DSCancelledException())
         nfcAdapter = NfcAdapter.getDefaultAdapter(activity)
         Log.i(TAG, "NFC Adapter obtained: $nfcAdapter")
+        if (nfcAdapter?.isEnabled != true) {
+            timeoutJob?.cancel()
+            waitingForCard.getAndSet(null)?.invoke(DSNfcUnavailableException())
+            return
+        }
 
         val readerCallback = NfcAdapter.ReaderCallback { tag ->
             Log.i(TAG, "Tag detected: ${tag.techList.joinToString()}")

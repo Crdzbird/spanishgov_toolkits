@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:felectronic_dnie/src/dnie_cades_operations.dart' as dnie;
 import 'package:felectronic_dnie/src/dnie_operations.dart' as dnie;
 import 'package:felectronic_dnie/src/workflows/dnie_identity.dart';
 import 'package:felectronic_dnie/src/workflows/dnie_readiness.dart';

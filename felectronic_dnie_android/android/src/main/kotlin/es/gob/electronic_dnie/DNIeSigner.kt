@@ -5,6 +5,7 @@ import android.nfc.Tag
 import android.nfc.tech.IsoDep
 import android.nfc.tech.NfcB
 import es.gob.electronic_dnie.managers.DNIeReaderManager
+import es.gob.electronic_dnie.managers.DataSignerManager
 import es.gob.electronic_dnie.managers.NFCConnectionManager
 import es.gob.electronic_dnie.model.CertificateDetails
 import es.gob.electronic_dnie.model.DniSignerResponse
@@ -15,7 +16,9 @@ import es.gob.electronic_dnie.utils.DSCustomIOScope
 import es.gob.electronic_dnie.utils.DSNotDNIeException
 import es.gob.electronic_dnie.utils.observe
 import es.gob.electronic_dnie.triphase.adesp_signer.TriPhaseSignerManager
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import java.security.KeyStore.PrivateKeyEntry
 
 class DNIeSigner {
 
@@ -23,6 +26,11 @@ class DNIeSigner {
     private var nfcConnectionManager: NFCConnectionManager = NFCConnectionManager()
     private var dnieReaderManager: DNIeReaderManager = DNIeReaderManager()
 
+    /**
+     * Reads the card and signs [data] on the phone with the private key of
+     * [signType], answering the raw PKCS#1 v1.5 signature (SHA-512 with RSA)
+     * and the certificate. Nothing is sent over the network.
+     */
     fun signWithDnie(
         data: ByteArray,
         can: String,
@@ -31,21 +39,58 @@ class DNIeSigner {
         signType: DNIeSignType,
         activity: Activity,
         onSuccess: (DniSignerResponse) -> Unit,
+        onError: (Throwable) -> Unit
+    ) {
+        signAfterScan(can, pin, timeout, signType, activity, onSuccess, onError) { keyEntry ->
+            DataSignerManager().signData(data, keyEntry, DataSignerManager.DNIE_ALGORITHM)
+        }
+    }
+
+    /**
+     * Reads the card and signs [data] as CAdES through the three-phase
+     * protocol, which sends [data] and the certificate chain to the remote
+     * signing service.
+     */
+    fun signCadesWithDnie(
+        data: ByteArray,
+        can: String,
+        pin: String,
+        timeout: Long,
+        signType: DNIeSignType,
+        activity: Activity,
+        onSuccess: (DniSignerResponse) -> Unit,
         onError: (Throwable) -> Unit,
-        onCardFound: (Unit) -> Unit,
         isDebug: Boolean = true
+    ) {
+        signAfterScan(can, pin, timeout, signType, activity, onSuccess, onError) { keyEntry ->
+            TriPhaseSignerManager(isDebug).triPhaseSign(
+                data = data,
+                certChain = keyEntry.certificateChain,
+                keyEntry = keyEntry
+            )
+        }
+    }
+
+    private fun signAfterScan(
+        can: String,
+        pin: String,
+        timeout: Long,
+        signType: DNIeSignType,
+        activity: Activity,
+        onSuccess: (DniSignerResponse) -> Unit,
+        onError: (Throwable) -> Unit,
+        signer: suspend (PrivateKeyEntry) -> Flow<Result<DniSignerResponse>>
     ) {
         nfcConnectionManager.startScan(
             activity,
             timeout,
             onSuccess = { tag ->
-                onCardFound(Unit)
-                readDni(
-                    data = data,
+                readDniAndSign(
                     pin = pin,
                     can = can,
                     tag = tag,
                     signType = signType,
+                    signer = signer,
                     onError = {
                         nfcConnectionManager.stopScan(activity)
                         onError(it)
@@ -53,8 +98,7 @@ class DNIeSigner {
                     onSuccess = {
                         nfcConnectionManager.stopScan(activity)
                         onSuccess(it)
-                    },
-                    isDebug = isDebug
+                    }
                 )
             },
             onError = onError
@@ -236,25 +280,20 @@ class DNIeSigner {
         )
     }
 
-    private fun readDni(
-        data: ByteArray,
+    private fun readDniAndSign(
         pin: String,
         can: String,
         tag: Tag,
         signType: DNIeSignType,
+        signer: suspend (PrivateKeyEntry) -> Flow<Result<DniSignerResponse>>,
         onSuccess: (DniSignerResponse) -> Unit,
-        onError: (Throwable) -> Unit,
-        isDebug: Boolean
+        onError: (Throwable) -> Unit
     ) {
         scope.launch {
             dnieReaderManager.readDni(pin = pin, can = can, tag = tag, signType = signType).observe(
-                onSuccess = { dniePrivateKeyEntry ->
+                onSuccess = { keyEntry ->
                     scope.launch {
-                        TriPhaseSignerManager(isDebug).triPhaseSign(
-                            data = data,
-                            certChain = dniePrivateKeyEntry.certificateChain,
-                            keyEntry = dniePrivateKeyEntry
-                        ).observe(onSuccess, onError)
+                        signer(keyEntry).observe(onSuccess, onError)
                     }
                 },
                 onError = onError

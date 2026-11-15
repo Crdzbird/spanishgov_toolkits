@@ -494,9 +494,11 @@ class FelectronicDnieHostApi {
 
   final String pigeonVar_messageChannelSuffix;
 
-  /// Signs [data] using the DNIe private key via NFC.
+  /// Signs [data] on the device with the DNIe private key via NFC.
   ///
-  /// [certificateType] selects which certificate to use: `'SIGN'` or `'AUTH'`.
+  /// Answers a raw PKCS#1 v1.5 signature, SHA-512 with RSA, and makes no
+  /// network call. [certificateType] selects which certificate to use:
+  /// `'SIGN'` or `'AUTH'`.
   Future<DnieSignedDataMessage> sign(
     Uint8List data,
     String can,
@@ -506,6 +508,37 @@ class FelectronicDnieHostApi {
   ) async {
     final pigeonVar_channelName =
         'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.sign$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[data, can, pin, timeout, certificateType],
+    );
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return pigeonVar_replyValue! as DnieSignedDataMessage;
+  }
+
+  /// Signs [data] as CAdES through the three-phase protocol, which sends
+  /// [data] and the certificate chain to the remote signing service.
+  ///
+  /// [certificateType] selects which certificate to use: `'SIGN'` or `'AUTH'`.
+  Future<DnieSignedDataMessage> signCades(
+    Uint8List data,
+    String can,
+    String pin,
+    int timeout,
+    String certificateType,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.signCades$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,

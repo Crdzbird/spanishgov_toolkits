@@ -20,6 +20,15 @@ class FelectronicDnieMock extends FelectronicDniePlatform {
   }) async => mockResult;
 
   @override
+  Future<SignedData> signCades({
+    required Uint8List data,
+    required String can,
+    required String pin,
+    Duration timeout = dnieDefaultTimeout,
+    DnieCertificateType certificateType = DnieCertificateType.sign,
+  }) async => mockResult;
+
+  @override
   Future<void> stopSign() async {}
 
   @override

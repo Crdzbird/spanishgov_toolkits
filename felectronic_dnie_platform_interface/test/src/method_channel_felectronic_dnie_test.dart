@@ -295,6 +295,15 @@ class _MockHostApi implements FelectronicDnieHostApi {
   }
 
   @override
+  Future<DnieSignedDataMessage> signCades(
+    Uint8List data,
+    String can,
+    String pin,
+    int timeout,
+    String certificateType,
+  ) => throw UnimplementedError('Covered by sign_cades_test.dart');
+
+  @override
   Future<void> stopSign() async {
     stopSignCalled = true;
   }
