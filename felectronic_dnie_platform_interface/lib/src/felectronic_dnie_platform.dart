@@ -6,13 +6,8 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 /// {@template felectronic_dnie_platform}
 /// The interface that implementations of felectronic_dnie must implement.
 ///
-/// Platform implementations should extend this class
-/// rather than implement it as `FelectronicDnie`.
-///
-/// Extending this class (using `extends`) ensures that the subclass will get
-/// the default implementation, while platform implementations that
-/// `implements` this interface will be broken by newly added
-/// [FelectronicDniePlatform] methods.
+/// Implementations should extend this class rather than implement it, so
+/// newly added methods do not break them.
 /// {@endtemplate}
 abstract class FelectronicDniePlatform extends PlatformInterface {
   /// {@macro felectronic_dnie_platform}
@@ -22,24 +17,22 @@ abstract class FelectronicDniePlatform extends PlatformInterface {
 
   static FelectronicDniePlatform _instance = MethodChannelFelectronicDnie();
 
-  /// The default instance of [FelectronicDniePlatform] to use.
-  ///
-  /// Defaults to [MethodChannelFelectronicDnie].
+  /// The instance in use, [MethodChannelFelectronicDnie] by default.
   static FelectronicDniePlatform get instance => _instance;
 
-  /// Platform-specific plugins should set this with their own
-  /// platform-specific class that extends [FelectronicDniePlatform]
-  /// when they register themselves.
+  /// Set by each platform implementation when it registers itself.
   static set instance(FelectronicDniePlatform instance) {
     PlatformInterface.verify(instance, _token);
     _instance = instance;
   }
 
-  /// Signs [data] with the private key of [certificateType] via NFC.
+  /// Signs [data] on the device with the private key of [certificateType].
   ///
-  /// [can] is the 6 digit Card Access Number, [pin] the 8 to 16 character
-  /// PIN, and [timeout] how long to wait for a card (see
-  /// [dnieDefaultTimeout] for how each platform treats it). Throws [DnieError].
+  /// [SignedData.signedData] is the raw PKCS#1 v1.5 signature, SHA-512 with
+  /// RSA, and [SignedData.certificate] the certificate as standard Base64
+  /// DER. Nothing leaves the device. [can] is the 6 digit Card Access Number,
+  /// [pin] the 8 to 16 character PIN, and [timeout] how long to wait for a
+  /// card (see [dnieDefaultTimeout]). Throws [DnieError].
   Future<SignedData> sign({
     required Uint8List data,
     required String can,
@@ -48,8 +41,20 @@ abstract class FelectronicDniePlatform extends PlatformInterface {
     DnieCertificateType certificateType = DnieCertificateType.sign,
   });
 
-  /// Stops the NFC operation in progress, which fails with
-  /// [DnieCancelledError].
+  /// Signs [data] as CAdES through the three-phase protocol, sending [data]
+  /// and the certificate chain to the remote signing service.
+  ///
+  /// [SignedData.signedData] is the CAdES signature. Takes the same arguments
+  /// as [sign]. Throws [DnieUnsupportedError] where the platform lacks it.
+  Future<SignedData> signCades({
+    required Uint8List data,
+    required String can,
+    required String pin,
+    Duration timeout = dnieDefaultTimeout,
+    DnieCertificateType certificateType = DnieCertificateType.sign,
+  });
+
+  /// Stops the NFC operation in progress, failing it with [DnieCancelledError].
   Future<void> stopSign();
 
   /// Reads the [certificateType] certificate without signing anything.
@@ -62,9 +67,8 @@ abstract class FelectronicDniePlatform extends PlatformInterface {
     DnieCertificateType certificateType = DnieCertificateType.sign,
   });
 
-  /// Probes an NFC card to check if it is a valid Spanish DNIe.
-  ///
-  /// No CAN or PIN required.
+  /// Probes an NFC card to check if it is a valid Spanish DNIe, with no CAN
+  /// or PIN.
   Future<CardProbeResult> probeCard({Duration timeout = dnieDefaultTimeout});
 
   /// Reads and parses the [certificateType] certificate's X.509 details.

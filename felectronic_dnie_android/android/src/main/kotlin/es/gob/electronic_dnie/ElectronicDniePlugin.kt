@@ -2,6 +2,7 @@ package es.gob.electronic_dnie
 
 import android.app.Activity
 import android.nfc.NfcAdapter
+import es.gob.electronic_dnie.model.DniSignerResponse
 import es.gob.electronic_dnie.utils.DNIeSignType
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
@@ -69,54 +70,81 @@ class ElectronicDniePlugin :
     ) {
         val currentActivity = requireActivity(callback) ?: return
         val signType = resolveSignType(certificateType)
+        replySigned(callback) { onSuccess, onError ->
+            dnieSigner.signWithDnie(
+                data = data,
+                can = can,
+                pin = pin,
+                activity = currentActivity,
+                timeout = timeout,
+                signType = signType,
+                onSuccess = onSuccess,
+                onError = onError,
+            )
+        }
+    }
 
+    override fun signCades(
+        data: ByteArray,
+        can: String,
+        pin: String,
+        timeout: Long,
+        certificateType: String,
+        callback: (Result<DnieSignedDataMessage>) -> Unit,
+    ) {
+        val currentActivity = requireActivity(callback) ?: return
+        val signType = resolveSignType(certificateType)
+        replySigned(callback) { onSuccess, onError ->
+            dnieSigner.signCadesWithDnie(
+                data = data,
+                can = can,
+                pin = pin,
+                activity = currentActivity,
+                timeout = timeout,
+                signType = signType,
+                onSuccess = onSuccess,
+                onError = onError,
+            )
+        }
+    }
+
+    private fun replySigned(
+        callback: (Result<DnieSignedDataMessage>) -> Unit,
+        operation: (
+            onSuccess: (DniSignerResponse) -> Unit,
+            onError: (Throwable) -> Unit,
+        ) -> Unit,
+    ) {
+        val reply: (Result<DnieSignedDataMessage>) -> Unit = { result ->
+            CoroutineScope(Dispatchers.Main).launch { callback(result) }
+        }
+        val fail: (Throwable) -> Unit = { throwable ->
+            reply(
+                Result.failure(
+                    FlutterError(
+                        throwable::class.java.simpleName,
+                        throwable.localizedMessage,
+                    ),
+                ),
+            )
+        }
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                dnieSigner.signWithDnie(
-                    data = data,
-                    can = can,
-                    pin = pin,
-                    activity = currentActivity,
-                    timeout = timeout,
-                    signType = signType,
-                    onSuccess = { response ->
-                        val result = DnieSignedDataMessage(
-                            signedData = response.signedData,
-                            signedDataBase64 = response.base64signedData,
-                            certificate = response.base64certificate,
-                        )
-                        CoroutineScope(Dispatchers.Main).launch {
-                            callback(Result.success(result))
-                        }
-                    },
-                    onError = { throwable ->
-                        CoroutineScope(Dispatchers.Main).launch {
-                            callback(
-                                Result.failure(
-                                    FlutterError(
-                                        throwable::class.java.simpleName,
-                                        throwable.localizedMessage,
-                                    ),
-                                ),
-                            )
-                        }
-                    },
-                    onCardFound = {},
+                operation(
+                    { response -> reply(Result.success(response.toMessage())) },
+                    fail,
                 )
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    callback(
-                        Result.failure(
-                            FlutterError(
-                                e::class.java.simpleName,
-                                e.localizedMessage,
-                            ),
-                        ),
-                    )
-                }
+                fail(e)
             }
         }
     }
+
+    private fun DniSignerResponse.toMessage() = DnieSignedDataMessage(
+        signedData = signedData,
+        signedDataBase64 = base64signedData,
+        certificate = base64certificate,
+    )
 
     override fun stopSign(callback: (Result<Unit>) -> Unit) {
         val currentActivity = requireActivity(callback) ?: return

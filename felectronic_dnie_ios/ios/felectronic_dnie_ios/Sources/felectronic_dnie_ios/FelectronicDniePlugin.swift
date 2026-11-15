@@ -59,6 +59,23 @@ public class FelectronicDniePlugin: NSObject, FlutterPlugin, FelectronicDnieHost
         )
     }
 
+    /// CAdES through the three-phase protocol is Android only, so this answers
+    /// `DSUnsupportedException`. `sign` gives the raw PKCS#1 signature here.
+    func signCades(
+        data: FlutterStandardTypedData,
+        can: String,
+        pin: String,
+        timeout: Int64,
+        certificateType: String,
+        completion: @escaping (Result<DnieSignedDataMessage, Error>) -> Void
+    ) {
+        completion(.failure(PigeonError(
+            code: "DSUnsupportedException",
+            message: "signCades is only available on Android. Use sign for a raw PKCS#1 signature.",
+            details: nil
+        )))
+    }
+
     func stopSign(
         completion: @escaping (Result<Void, Error>) -> Void
     ) {

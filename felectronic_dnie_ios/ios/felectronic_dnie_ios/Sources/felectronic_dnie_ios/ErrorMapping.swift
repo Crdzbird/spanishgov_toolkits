@@ -32,7 +32,9 @@ extension NFCError {
             return "DSCardTagException"
         case .tagSendCommandFail:
             return "DSDNIeConnectionException"
-        case .iso7816Fail, .notAvailable, .notAvailableForOSVersion:
+        case .notAvailable, .notAvailableForOSVersion:
+            return "DSNfcUnavailableException"
+        case .iso7816Fail:
             return "DSDNIeProviderException"
         case .noDataReaded:
             return "DSPrivateKeyException"

@@ -45,7 +45,7 @@ final class DNIeCardOperations: NSObject {
                 certBase64Result = EsGobAfirmaCoreMiscBase64.encode(
                     with: securityCert?.getEncoded(),
                     withBoolean: true
-                )
+                ).map(Self.base64StringFromBase64UrlEncoded)
             }, error: &error)
 
             if success, let cert = certBase64Result {
@@ -115,7 +115,7 @@ final class DNIeCardOperations: NSObject {
                 certBase64Result = EsGobAfirmaCoreMiscBase64.encode(
                     with: securityCert?.getEncoded(),
                     withBoolean: true
-                )
+                ).map(Self.base64StringFromBase64UrlEncoded)
 
                 NotificationCenter.default.post(
                     name: NSNotification.Name("dni.info"),

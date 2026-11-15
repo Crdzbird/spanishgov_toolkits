@@ -1,11 +1,11 @@
 package es.gob.electronic_dnie.managers
 
-import android.util.Base64
 import es.gob.electronic_dnie.model.DniSignerResponse
 import es.gob.electronic_dnie.utils.DSSigningException
 import es.gob.electronic_dnie.utils.toFNMTException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import org.bouncycastle.util.encoders.Base64
 import java.security.KeyStore
 import java.security.Signature
 
@@ -19,6 +19,14 @@ private val algorithms = listOf(
     Pair("SHA512EC", "SHA512withECDSA")
 )
 
+/**
+ * Signs on the device with a private key, the DNIe's included, so the data
+ * never leaves the phone.
+ *
+ * The answer carries the raw signature (PKCS#1 v1.5 for the RSA algorithms),
+ * its standard Base64 and the certificate DER as standard Base64, neither
+ * with line breaks.
+ */
 class DataSignerManager {
     suspend fun signData(
         data: ByteArray,
@@ -28,32 +36,30 @@ class DataSignerManager {
         emit(signDataWithPrivateKey(data = data, keyEntry = keyEntry, algKey = algKey))
     }
 
-    private fun signDataWithPrivateKey(
+    fun signDataWithPrivateKey(
         data: ByteArray,
         keyEntry: KeyStore.PrivateKeyEntry,
         algKey: String
     ): Result<DniSignerResponse> {
         return try {
-            // 1. Init signature with algorithm
             val signature = Signature.getInstance(algorithms.first { it.first == algKey }.second)
             signature.initSign(keyEntry.privateKey)
-
-            // 2. Update data to be signed
             signature.update(data)
-
-            // 3. Sign and return data model
-            val response = DniSignerResponse(
-                signedData = signature.sign(),
-                base64signedData = Base64.encodeToString(signature.sign(), Base64.DEFAULT),
-                base64certificate = Base64.encodeToString(
-                    keyEntry.certificate.encoded,
-                    Base64.DEFAULT
+            val signed = signature.sign()
+            Result.success(
+                DniSignerResponse(
+                    signedData = signed,
+                    base64signedData = Base64.toBase64String(signed),
+                    base64certificate = Base64.toBase64String(keyEntry.certificate.encoded)
                 )
             )
-
-            Result.success(response)
         } catch (th: Throwable) {
             Result.failure(th.toFNMTException(DSSigningException()))
         }
+    }
+
+    companion object {
+        /** The algorithm `sign` uses on both platforms: SHA-512 with RSA. */
+        const val DNIE_ALGORITHM = "SHA512RSA"
     }
 }

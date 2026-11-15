@@ -4,9 +4,11 @@ import 'package:felectronic_dnie_platform_interface/felectronic_dnie_platform_in
 
 FelectronicDniePlatform get _platform => FelectronicDniePlatform.instance;
 
-/// Signs [data] using the DNIe private key via NFC.
+/// Signs [data] on the device with the DNIe private key via NFC.
 ///
-/// Every operation here ignores whitespace around [can] and [pin].
+/// [SignedData.signedData] is the raw PKCS#1 v1.5 signature, SHA-512 with
+/// RSA, and nothing leaves the device. Every operation here ignores
+/// whitespace around [can] and [pin].
 Future<SignedData> sign({
   required Uint8List data,
   required String can,

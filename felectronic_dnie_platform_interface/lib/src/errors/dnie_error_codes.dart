@@ -19,6 +19,8 @@ DnieError _fromPlatformException(PlatformException exception) =>
       'DSDNIeLockedPINException' => const DnieLockedPinError(),
       'DSNotDNIeException' => const DnieNotDnieError(),
       'DSDNIeDamagedException' => const DnieDamagedError(),
+      'DSNfcUnavailableException' => const DnieNfcUnavailableError(),
+      'DSUnsupportedException' => DnieUnsupportedError(exception.message),
       _ => DnieUnknownError(
         exception.message ?? 'Unknown error: ${exception.code}',
       ),

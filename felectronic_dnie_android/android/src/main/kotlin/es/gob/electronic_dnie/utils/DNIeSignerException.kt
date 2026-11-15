@@ -15,6 +15,9 @@ class DSTimeoutException :
 
 class DSCancelledException : DNIeSignerException("The NFC operation was cancelled.")
 
+class DSNfcUnavailableException :
+    DNIeSignerException("NFC is not available. Switch NFC on and try again.")
+
 class DSCardTagException :
     DNIeSignerException("Could not get NFC Tag from the detected card. Scan stopped!")
 

@@ -8,6 +8,7 @@ part 'dnie_error_codes.dart';
 part 'dnie_error_names.dart';
 part 'dnie_expired_certificate_error.dart';
 part 'dnie_locked_pin_error.dart';
+part 'dnie_nfc_unavailable_error.dart';
 part 'dnie_not_dnie_error.dart';
 part 'dnie_private_key_error.dart';
 part 'dnie_provider_error.dart';
@@ -15,6 +16,7 @@ part 'dnie_signing_error.dart';
 part 'dnie_timeout_error.dart';
 part 'dnie_underage_error.dart';
 part 'dnie_unknown_error.dart';
+part 'dnie_unsupported_error.dart';
 part 'dnie_wrong_can_error.dart';
 part 'dnie_wrong_pin_error.dart';
 

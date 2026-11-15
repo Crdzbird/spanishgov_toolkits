@@ -15,5 +15,7 @@ String _typeName(DnieError error) => switch (error) {
   DnieLockedPinError() => 'DnieLockedPinError',
   DnieNotDnieError() => 'DnieNotDnieError',
   DnieDamagedError() => 'DnieDamagedError',
+  DnieNfcUnavailableError() => 'DnieNfcUnavailableError',
+  DnieUnsupportedError() => 'DnieUnsupportedError',
   DnieUnknownError() => 'DnieUnknownError',
 };
