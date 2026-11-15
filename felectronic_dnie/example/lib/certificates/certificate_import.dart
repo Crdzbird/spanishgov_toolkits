@@ -29,15 +29,13 @@ abstract final class CertificateImport {
   /// Every file type is offered, because iOS has no dependable type for
   /// PKCS#12 and a filtered picker shows the folder as empty.
   static Future<DemoStatus> picked(BuildContext context) async {
-    final file = (await FilePicker.platform.pickFiles(
-      withData: true,
-    ))?.files.singleOrNull;
-    final bytes = file?.bytes;
-    if (file == null || bytes == null) return const DemoStatus('Cancelled');
+    final file = await FilePicker.pickFile();
+    if (file == null) return const DemoStatus('Cancelled');
     final name = file.name.toLowerCase();
     if (!name.endsWith('.p12') && !name.endsWith('.pfx')) {
       return DemoStatus.error('Not a PKCS#12 file', 'Chosen: ${file.name}');
     }
+    final bytes = await file.readAsBytes();
     if (!context.mounted) return const DemoStatus('Cancelled');
     final password = await PasswordDialog.ask(context);
     if (password == null) return const DemoStatus('Cancelled');
