@@ -3,7 +3,7 @@ import 'package:felectronic_certificates/felectronic_certificates.dart'
 import 'package:felectronic_dnie_example/certificates/certificate_summary.dart';
 import 'package:felectronic_dnie_example/certificates/password_dialog.dart';
 import 'package:felectronic_dnie_example/shared/demo_status.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
@@ -29,7 +29,7 @@ abstract final class CertificateImport {
   /// Every file type is offered, because iOS has no dependable type for
   /// PKCS#12 and a filtered picker shows the folder as empty.
   static Future<DemoStatus> picked(BuildContext context) async {
-    final file = await FilePicker.pickFile();
+    final file = await openFile();
     if (file == null) return const DemoStatus('Cancelled');
     final name = file.name.toLowerCase();
     if (!name.endsWith('.p12') && !name.endsWith('.pfx')) {
