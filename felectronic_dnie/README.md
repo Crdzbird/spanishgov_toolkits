@@ -11,7 +11,9 @@ A Flutter plugin for reading and signing with the Spanish electronic DNIe (Docum
 - **NFC availability** -- check that NFC hardware is present and switched on
 - **Probe card** -- tell whether a card is a DNIe, with no CAN or PIN
 - **Verify PIN** -- check the CAN and PIN without signing anything
-- **Sign** -- sign bytes or text with the signing or authentication certificate
+- **Sign** -- sign bytes or text on the phone with the signing or
+  authentication certificate, returning the raw PKCS#1 v1.5 signature
+- **CAdES (Android)** -- `signCades` signs through the remote three-phase service
 - **Certificates** -- read the raw certificate, or its parsed X.509 details
 - **Personal data** -- name, NIF and country from the certificate
 - **DnieSession** -- enter the CAN and PIN once, then use them for every operation
@@ -112,6 +114,39 @@ final signed = await sign(
 (30 seconds). Android clamps it to between 3 and 30 seconds, and iOS does not
 use it, because Core NFC ends every session after 60 seconds on its own.
 
+### What `sign` returns
+
+`sign` (and `DnieSession.sign`, `signText`, `probeAndSign`) signs on the phone:
+the card's private key signs the data and nothing is sent over the network, on
+Android and iOS alike. The result is the same shape on both:
+
+| Field | Value |
+|---|---|
+| `signedData` | The raw PKCS#1 v1.5 signature, SHA-512 with RSA (OID 1.2.840.113549.1.1.13), 256 bytes for the DNIe's 2048-bit keys |
+| `signedDataBase64` | `signedData` as standard Base64, on one line |
+| `certificate` | The certificate of the key that signed, DER as standard Base64 |
+
+The digest is always SHA-512; there is no option to choose another. Any
+verifier that accepts `SHA512withRSA` can check the signature against the
+certificate's public key, which makes `sign(certificateType:
+DnieCertificateType.auth)` suitable for answering a login challenge.
+
+### CAdES through the three-phase service (Android)
+
+```dart
+final cades = await signCades(
+  data: pdfBytes,
+  can: '123456',
+  pin: 'mySecurePin',
+);
+```
+
+`signCades` (and `DnieSession.signCades`) produces a CAdES signature through
+the three-phase protocol: the data and the certificate chain are sent to
+`https://firmamovil-appfactory.redsara.es`, and only the PKCS#1 step happens on
+the card. `signedData` is the CAdES signature. It is Android only; iOS throws
+`DnieUnsupportedError`.
+
 ### Workflows
 
 ```dart
@@ -177,6 +212,8 @@ Every operation throws a subclass of the sealed `DnieError`:
 | `DniePrivateKeyError` | The private key could not be used |
 | `DnieSigningError` | The signature itself failed |
 | `DnieCardTagError` | The NFC tag could not be read |
+| `DnieNfcUnavailableError` | The device has no NFC, or NFC is switched off |
+| `DnieUnsupportedError` | The operation is not available on this platform, such as `signCades` on iOS |
 | `DnieUnknownError` | Anything else, with the native message |
 
 `isRetryable` and `isCredentialError` group them by what the user can do:
@@ -190,6 +227,22 @@ try {
   print(e.isRetryable ? 'Hold the card still and try again.' : e.message);
 }
 ```
+
+## Migrating from 2.x
+
+- On Android, `sign` used to return a CAdES signature made through the remote
+  three-phase service. It now signs on the phone and returns the raw PKCS#1
+  v1.5 signature, as iOS always did. If you relied on CAdES, call `signCades`
+  (or `DnieSession.signCades`) instead; it takes the same arguments and returns
+  what `sign` returned before.
+- `SignedData.certificate` is standard Base64 on iOS too; it used to be
+  URL-safe Base64 there.
+- Two new `DnieError` subclasses, `DnieNfcUnavailableError` and
+  `DnieUnsupportedError`. An exhaustive `switch` over `DnieError` needs cases
+  for them. With NFC switched off, Android used to wait for the timeout and
+  throw `DnieTimeoutError`, and iOS threw `DnieProviderError`; both now throw
+  `DnieNfcUnavailableError` at once.
+- A custom `FelectronicDniePlatform` must implement `signCades`.
 
 ## Migrating from 1.x
 

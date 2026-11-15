@@ -78,7 +78,7 @@ Read, sign, and verify identity with the Spanish electronic DNIe via NFC.
 
 ```yaml
 dependencies:
-  felectronic_dnie: ^2.0.0
+  felectronic_dnie: ^3.0.0
 ```
 
 ```dart
@@ -91,7 +91,7 @@ if (!nfc.isReady) print(nfc.statusMessage);
 // Probe card (no PIN required)
 final probe = await probeCard();
 if (probe.isValidDnie) {
-  // Sign data
+  // Sign on the phone: the raw PKCS#1 v1.5 signature, SHA-512 with RSA
   final result = await sign(
     data: utf8.encode('Hello, DNIe!'),
     can: '123456',

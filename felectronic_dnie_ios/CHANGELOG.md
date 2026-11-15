@@ -1,5 +1,23 @@
 # Changelog
 
+## 3.0.0
+
+### Breaking changes
+
+- Requires `felectronic_dnie_platform_interface` 3.0.0.
+- `signCades` answers `DSUnsupportedException` (`DnieUnsupportedError`): the
+  three-phase CAdES flow is Android only. `sign` is unchanged and still signs
+  on the phone.
+- NFC missing, or an iOS version without tag reading, fails with
+  `DSNfcUnavailableException` (`DnieNfcUnavailableError`) instead of
+  `DnieProviderError`.
+
+### Fixed
+
+- `SignedData.certificate` from `sign` and `readCertificate` was URL-safe
+  Base64. It is standard Base64, as on Android, which also lets
+  `readCertificateDetails` and `readPersonalData` decode it.
+
 ## 2.0.0
 
 ### Breaking changes

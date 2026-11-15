@@ -1,5 +1,30 @@
 # Changelog
 
+## 3.0.0
+
+### Breaking changes
+
+- `sign` no longer goes through the remote three-phase service. It reads the
+  card over NFC and signs the data on the phone with the private key of the
+  requested certificate, returning the raw PKCS#1 v1.5 signature (SHA-512 with
+  RSA) and the certificate as standard Base64 DER, the same shape iOS returns.
+  Nothing is sent over the network. Before, the data and the certificate chain
+  went to `firmamovil-appfactory.redsara.es` and the result was CAdES.
+- With NFC switched off, or on a device without NFC, every operation fails at
+  once with `DSNfcUnavailableException` (`DnieNfcUnavailableError`) instead of
+  waiting for the timeout.
+
+### Added
+
+- `signCades`, the three-phase CAdES signature `sign` used to make.
+
+### Fixed
+
+- The on-device signer `sign` now uses, previously unused, computed the
+  signature twice, so the Base64 it returned was the signature of empty input,
+  and that Base64 carried line breaks. It signs once and uses standard Base64
+  on one line.
+
 ## 2.0.0
 
 ### Breaking changes
