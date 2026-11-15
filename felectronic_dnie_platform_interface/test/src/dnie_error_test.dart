@@ -27,6 +27,19 @@ void main() {
     test('maps known codes to their type', () {
       expect(map('DSTimeoutException'), isA<DnieTimeoutError>());
       expect(map('DSNotDNIeException'), isA<DnieNotDnieError>());
+      expect(map('DSDNIeWrongCANException'), isA<DnieWrongCanError>());
+      expect(map('DSDNIeLockedPINException'), isA<DnieLockedPinError>());
+      expect(map('DSNfcUnavailableException'), isA<DnieNfcUnavailableError>());
+    });
+
+    test('an unsupported operation keeps the native explanation', () {
+      final error = map('DSUnsupportedException', 'Only on Android.');
+      expect(error, isA<DnieUnsupportedError>());
+      expect(error.toString(), 'DnieUnsupportedError: Only on Android.');
+      expect(
+        map('DSUnsupportedException').message,
+        'This operation is not available on this platform.',
+      );
     });
 
     test('keeps the message of an unknown code', () {

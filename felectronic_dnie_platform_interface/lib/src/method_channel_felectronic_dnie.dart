@@ -6,14 +6,12 @@ import 'package:felectronic_dnie_platform_interface/src/mappers/certificate_deta
 import 'package:felectronic_dnie_platform_interface/src/mappers/dnie_error_mapping.dart';
 import 'package:felectronic_dnie_platform_interface/src/mappers/nfc_status_message_mapper.dart';
 import 'package:felectronic_dnie_platform_interface/src/mappers/personal_data_message_mapper.dart';
-import 'package:felectronic_dnie_platform_interface/src/mappers/signed_data_message_mapper.dart';
+import 'package:felectronic_dnie_platform_interface/src/mappers/signed_data_future_mapper.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
-/// An implementation of [FelectronicDniePlatform] that uses Pigeon-generated
-/// type-safe bindings to communicate with the native platform.
+/// The [FelectronicDniePlatform] that talks to native code through Pigeon.
 ///
-/// The Android and iOS plugins share one Pigeon API, so both extend this
-/// class and only register themselves.
+/// Android and iOS share one Pigeon API, so both extend this class.
 class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
   /// The Pigeon-generated host API used to communicate with native code.
   @visibleForTesting
@@ -28,8 +26,18 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
     DnieCertificateType certificateType = DnieCertificateType.sign,
   }) => api
       .sign(data, can, pin, timeout.inSeconds, certificateType.value)
-      .then((m) => m.toModel())
-      .mapDnieErrors();
+      .toSignedData();
+
+  @override
+  Future<SignedData> signCades({
+    required Uint8List data,
+    required String can,
+    required String pin,
+    Duration timeout = dnieDefaultTimeout,
+    DnieCertificateType certificateType = DnieCertificateType.sign,
+  }) => api
+      .signCades(data, can, pin, timeout.inSeconds, certificateType.value)
+      .toSignedData();
 
   @override
   Future<void> stopSign() => api.stopSign().mapDnieErrors();
@@ -42,8 +50,7 @@ class MethodChannelFelectronicDnie extends FelectronicDniePlatform {
     DnieCertificateType certificateType = DnieCertificateType.sign,
   }) => api
       .readCertificate(can, pin, timeout.inSeconds, certificateType.value)
-      .then((m) => m.toModel())
-      .mapDnieErrors();
+      .toSignedData();
 
   @override
   Future<CardProbeResult> probeCard({Duration timeout = dnieDefaultTimeout}) =>

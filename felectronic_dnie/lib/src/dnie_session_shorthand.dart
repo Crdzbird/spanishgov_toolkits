@@ -5,6 +5,17 @@ extension DnieSessionShorthand on DnieSession {
   /// Signs the UTF-8 bytes of [text].
   Future<SignedData> signText(String text) => sign(utf8.encode(text));
 
+  /// Signs [data] as CAdES through the remote three-phase service.
+  ///
+  /// Android only; see [dnie.signCades].
+  Future<SignedData> signCades(Uint8List data) => dnie.signCades(
+    data: data,
+    can: _can,
+    pin: _pin,
+    timeout: timeout,
+    certificateType: certificateType,
+  );
+
   /// This session's credentials, using the [type] certificate.
   DnieSession withCertificate(DnieCertificateType type) =>
       DnieSession._(_can, _pin, type, timeout);

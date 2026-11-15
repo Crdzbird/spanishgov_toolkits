@@ -127,11 +127,26 @@ class DnieNfcStatusMessage {
 /// and iOS (Swift).
 @HostApi()
 abstract class FelectronicDnieHostApi {
-  /// Signs [data] using the DNIe private key via NFC.
+  /// Signs [data] on the device with the DNIe private key via NFC.
+  ///
+  /// Answers a raw PKCS#1 v1.5 signature, SHA-512 with RSA, and makes no
+  /// network call. [certificateType] selects which certificate to use:
+  /// `'SIGN'` or `'AUTH'`.
+  @async
+  DnieSignedDataMessage sign(
+    Uint8List data,
+    String can,
+    String pin,
+    int timeout,
+    String certificateType,
+  );
+
+  /// Signs [data] as CAdES through the three-phase protocol, which sends
+  /// [data] and the certificate chain to the remote signing service.
   ///
   /// [certificateType] selects which certificate to use: `'SIGN'` or `'AUTH'`.
   @async
-  DnieSignedDataMessage sign(
+  DnieSignedDataMessage signCades(
     Uint8List data,
     String can,
     String pin,

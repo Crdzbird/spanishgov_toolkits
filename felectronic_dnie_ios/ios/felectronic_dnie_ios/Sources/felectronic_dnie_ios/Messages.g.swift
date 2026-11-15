@@ -505,10 +505,17 @@ class MessagesPigeonCodec: FlutterStandardMessageCodec, @unchecked Sendable {
 ///
 /// Generated protocol from Pigeon that represents a handler of messages from Flutter.
 protocol FelectronicDnieHostApi {
-  /// Signs [data] using the DNIe private key via NFC.
+  /// Signs [data] on the device with the DNIe private key via NFC.
+  ///
+  /// Answers a raw PKCS#1 v1.5 signature, SHA-512 with RSA, and makes no
+  /// network call. [certificateType] selects which certificate to use:
+  /// `'SIGN'` or `'AUTH'`.
+  func sign(data: FlutterStandardTypedData, can: String, pin: String, timeout: Int64, certificateType: String, completion: @escaping (Result<DnieSignedDataMessage, Error>) -> Void)
+  /// Signs [data] as CAdES through the three-phase protocol, which sends
+  /// [data] and the certificate chain to the remote signing service.
   ///
   /// [certificateType] selects which certificate to use: `'SIGN'` or `'AUTH'`.
-  func sign(data: FlutterStandardTypedData, can: String, pin: String, timeout: Int64, certificateType: String, completion: @escaping (Result<DnieSignedDataMessage, Error>) -> Void)
+  func signCades(data: FlutterStandardTypedData, can: String, pin: String, timeout: Int64, certificateType: String, completion: @escaping (Result<DnieSignedDataMessage, Error>) -> Void)
   /// Stops an in-progress NFC signing operation.
   func stopSign(completion: @escaping (Result<Void, Error>) -> Void)
   /// Reads the certificate from the DNIe without signing data.
@@ -540,9 +547,11 @@ class FelectronicDnieHostApiSetup {
   /// Sets up an instance of `FelectronicDnieHostApi` to handle messages through the `binaryMessenger`.
   static func setUp(binaryMessenger: FlutterBinaryMessenger, api: FelectronicDnieHostApi?, messageChannelSuffix: String = "") {
     let channelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
-    /// Signs [data] using the DNIe private key via NFC.
+    /// Signs [data] on the device with the DNIe private key via NFC.
     ///
-    /// [certificateType] selects which certificate to use: `'SIGN'` or `'AUTH'`.
+    /// Answers a raw PKCS#1 v1.5 signature, SHA-512 with RSA, and makes no
+    /// network call. [certificateType] selects which certificate to use:
+    /// `'SIGN'` or `'AUTH'`.
     let signChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.sign\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       signChannel.setMessageHandler { message, reply in
@@ -563,6 +572,31 @@ class FelectronicDnieHostApiSetup {
       }
     } else {
       signChannel.setMessageHandler(nil)
+    }
+    /// Signs [data] as CAdES through the three-phase protocol, which sends
+    /// [data] and the certificate chain to the remote signing service.
+    ///
+    /// [certificateType] selects which certificate to use: `'SIGN'` or `'AUTH'`.
+    let signCadesChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.signCades\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      signCadesChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let dataArg = args[0] as! FlutterStandardTypedData
+        let canArg = args[1] as! String
+        let pinArg = args[2] as! String
+        let timeoutArg = args[3] as! Int64
+        let certificateTypeArg = args[4] as! String
+        api.signCades(data: dataArg, can: canArg, pin: pinArg, timeout: timeoutArg, certificateType: certificateTypeArg) { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      signCadesChannel.setMessageHandler(nil)
     }
     /// Stops an in-progress NFC signing operation.
     let stopSignChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.stopSign\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)

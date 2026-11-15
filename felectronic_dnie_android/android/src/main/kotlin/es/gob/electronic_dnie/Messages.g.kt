@@ -535,11 +535,20 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
  */
 interface FelectronicDnieHostApi {
   /**
-   * Signs [data] using the DNIe private key via NFC.
+   * Signs [data] on the device with the DNIe private key via NFC.
+   *
+   * Answers a raw PKCS#1 v1.5 signature, SHA-512 with RSA, and makes no
+   * network call. [certificateType] selects which certificate to use:
+   * `'SIGN'` or `'AUTH'`.
+   */
+  fun sign(data: ByteArray, can: String, pin: String, timeout: Long, certificateType: String, callback: (Result<DnieSignedDataMessage>) -> Unit)
+  /**
+   * Signs [data] as CAdES through the three-phase protocol, which sends
+   * [data] and the certificate chain to the remote signing service.
    *
    * [certificateType] selects which certificate to use: `'SIGN'` or `'AUTH'`.
    */
-  fun sign(data: ByteArray, can: String, pin: String, timeout: Long, certificateType: String, callback: (Result<DnieSignedDataMessage>) -> Unit)
+  fun signCades(data: ByteArray, can: String, pin: String, timeout: Long, certificateType: String, callback: (Result<DnieSignedDataMessage>) -> Unit)
   /** Stops an in-progress NFC signing operation. */
   fun stopSign(callback: (Result<Unit>) -> Unit)
   /**
@@ -594,6 +603,30 @@ interface FelectronicDnieHostApi {
             val timeoutArg = args[3] as Long
             val certificateTypeArg = args[4] as String
             api.sign(dataArg, canArg, pinArg, timeoutArg, certificateTypeArg) { result: Result<DnieSignedDataMessage> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(MessagesPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(MessagesPigeonUtils.wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.felectronic_dnie_platform_interface.FelectronicDnieHostApi.signCades$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val dataArg = args[0] as ByteArray
+            val canArg = args[1] as String
+            val pinArg = args[2] as String
+            val timeoutArg = args[3] as Long
+            val certificateTypeArg = args[4] as String
+            api.signCades(dataArg, canArg, pinArg, timeoutArg, certificateTypeArg) { result: Result<DnieSignedDataMessage> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(MessagesPigeonUtils.wrapError(error))

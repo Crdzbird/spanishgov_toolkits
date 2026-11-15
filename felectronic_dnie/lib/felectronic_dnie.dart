@@ -9,6 +9,9 @@
 /// );
 /// print(result.signedDataBase64);
 /// ```
+///
+/// `sign` signs on the device and returns the raw PKCS#1 v1.5 signature.
+/// `signCades` (Android only) returns CAdES from the remote service.
 library;
 
 export 'package:felectronic_dnie_platform_interface/felectronic_dnie_platform_interface.dart'
@@ -26,6 +29,7 @@ export 'package:felectronic_dnie_platform_interface/felectronic_dnie_platform_in
         MethodChannelFelectronicDnie,
         X509PublicKeyUtil;
 
+export 'src/dnie_cades_operations.dart';
 export 'src/dnie_operations.dart';
 export 'src/dnie_session.dart';
 export 'src/workflows/dnie_identity.dart';
