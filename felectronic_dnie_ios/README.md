@@ -31,13 +31,13 @@ unverified binary into your app. The first `pod install` therefore needs
 network access; to use a mirror, set `FELECTRONIC_JRE_URL` to a copy of the
 same archive.
 
-j2objc is Apache 2.0; its licence is extracted next to the framework as
+j2objc is Apache 2.0; its license is extracted next to the framework as
 `J2OBJC_LICENSE`.
 
 ### Publishing a new runtime (maintainers)
 
 1. `Tools/build_jre_emul.sh` builds `ios/Frameworks/JRE.xcframework`.
-2. `Tools/package_jre.sh` zips it with the licence and prints its SHA-256.
+2. `Tools/package_jre.sh` zips it with the license and prints its SHA-256.
 3. Upload the zip to a release tagged `j2objc-jre-<version>`, then update
    `jre_version` and `jre_sha256` in the podspec.
 

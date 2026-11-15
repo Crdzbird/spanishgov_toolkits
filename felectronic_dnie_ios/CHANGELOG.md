@@ -38,7 +38,7 @@
 - `stopSign()` dropped the pending completions without calling them and left
   the NFC session running. It now fails every pending call with
   `DnieCancelledError` and ends the session.
-- The podspec declared a BSD licence; the package is MIT.
+- The podspec declared a BSD license; the package is MIT.
 
 ## 1.0.0
 
