@@ -1,5 +1,19 @@
 # Changelog
 
+## 3.0.0
+
+### Breaking changes
+
+- `sign` is defined as signing on the device: the raw PKCS#1 v1.5 signature,
+  SHA-512 with RSA, and the certificate as standard Base64 DER, with no network
+  call. Both implementations now do this.
+- New abstract method `signCades` on `FelectronicDniePlatform`, and a matching
+  `signCades` on the Pigeon host API, for CAdES through the remote three-phase
+  service. Custom platforms must implement it.
+- `DnieNfcUnavailableError` (code `DSNfcUnavailableException`) and
+  `DnieUnsupportedError` (code `DSUnsupportedException`) join the sealed
+  `DnieError`, so exhaustive switches need two more cases.
+
 ## 2.0.0
 
 ### Breaking changes
