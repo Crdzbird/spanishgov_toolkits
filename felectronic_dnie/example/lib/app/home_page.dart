@@ -1,7 +1,7 @@
 import 'package:felectronic_dnie_example/certificates/certificates_tab.dart';
 import 'package:felectronic_dnie_example/clave/clave_tab.dart';
 import 'package:felectronic_dnie_example/dnie/dnie_tab.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The three ways to sign, one per tab.
 final class HomePage extends StatelessWidget {

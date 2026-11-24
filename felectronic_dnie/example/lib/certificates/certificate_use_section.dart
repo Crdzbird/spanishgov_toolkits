@@ -2,7 +2,7 @@ import 'package:felectronic_dnie_example/certificates/certificate_actions.dart';
 import 'package:felectronic_dnie_example/shared/action_button.dart';
 import 'package:felectronic_dnie_example/shared/demo_controller.dart';
 import 'package:felectronic_dnie_example/shared/section_title.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Using the default certificate, and removing it again.
 final class CertificateUseSection extends StatelessWidget {

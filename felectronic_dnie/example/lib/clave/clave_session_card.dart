@@ -1,7 +1,7 @@
 import 'package:felectronic_dnie_example/clave/clave_session_actions.dart';
 import 'package:felectronic_dnie_example/shared/action_button.dart';
 import 'package:felectronic_dnie_example/shared/demo_controller.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// What can be done with a stored Cl@ve session.
 final class ClaveSessionCard extends StatelessWidget {

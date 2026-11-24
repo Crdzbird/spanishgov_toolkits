@@ -1,5 +1,5 @@
 import 'package:felectronic_dnie_example/app/home_page.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The example app: one tab per way of signing.
 final class ExampleApp extends StatelessWidget {

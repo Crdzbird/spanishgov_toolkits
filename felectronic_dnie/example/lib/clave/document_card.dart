@@ -1,7 +1,7 @@
 import 'package:felectronic_dnie_example/clave/document_checks.dart';
 import 'package:felectronic_dnie_example/shared/demo_controller.dart';
 import 'package:felectronic_dnie_example/shared/section_card.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The document and contrast, checked offline. Cl@ve Movil uses them too.
 final class DocumentCard extends StatelessWidget {

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A banner for a problem that stops the tab from working, such as NFC
 /// being switched off.

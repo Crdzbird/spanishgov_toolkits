@@ -1,6 +1,6 @@
 import 'package:felectronic_dnie_example/shared/demo_controller.dart';
 import 'package:felectronic_dnie_example/shared/status_panel.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The layout every tab shares: a scrolling list of [children] above a
 /// pinned [StatusPanel].

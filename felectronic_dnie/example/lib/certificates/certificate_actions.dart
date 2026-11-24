@@ -5,7 +5,7 @@ import 'package:felectronic_certificates/felectronic_certificates.dart'
 import 'package:felectronic_dnie_example/certificates/certificate_summary.dart';
 import 'package:felectronic_dnie_example/shared/demo_status.dart';
 import 'package:felectronic_dnie_example/shared/x509_summary.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Choosing, using and removing installed certificates.
 abstract final class CertificateActions {

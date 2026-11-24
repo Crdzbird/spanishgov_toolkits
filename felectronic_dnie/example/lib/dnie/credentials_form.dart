@@ -1,5 +1,5 @@
 import 'package:felectronic_dnie/felectronic_dnie.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The certificate choice and the CAN and PIN every card action needs.
 final class CredentialsForm extends StatelessWidget {

@@ -2,6 +2,9 @@
 
 ## 1.1.0
 
+- Requires Flutter 3.47 and Dart 3.13. The certificate picker imports Material
+  from `material_ui`, since Flutter deprecated `package:flutter/material.dart`
+  after 3.47.
 - `CertificateSession.sign` and `signWithDefaultCertificate` accept an optional
   `format`, producing CAdES, PAdES or XAdES signatures through the @firma
   service. Without one, behavior is unchanged: a bare PKCS#1 signature computed

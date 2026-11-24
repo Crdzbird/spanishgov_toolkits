@@ -4,8 +4,8 @@ import 'package:felectronic_dnie_example/certificates/certificate_summary.dart';
 import 'package:felectronic_dnie_example/certificates/password_dialog.dart';
 import 'package:felectronic_dnie_example/shared/demo_status.dart';
 import 'package:file_selector/file_selector.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:material_ui/material_ui.dart';
 
 /// Getting a certificate into the app, which the other actions need: an app
 /// can only use identities in its own keychain.

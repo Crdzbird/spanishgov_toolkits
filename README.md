@@ -37,7 +37,8 @@ These are implementation details of the federated plugins above. You do not need
 | `felectronic_x509` | | | All platforms |
 
 `felectronic_dnie` 3.0 and `felectronic_certificates_android` 1.1 require Flutter
-3.44 or newer: their Android plugins use built-in Kotlin.
+3.44 or newer: their Android plugins use built-in Kotlin. `felectronic_certificates`
+1.1 requires Flutter 3.47 or newer, for its Material widgets from `material_ui`.
 
 ## Security
 

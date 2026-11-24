@@ -1,5 +1,5 @@
 import 'package:felectronic_clave/felectronic_clave.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// An icon for each way of signing in to Cl@ve.
 extension ClaveMethodIcon on ClaveAuthMethod {

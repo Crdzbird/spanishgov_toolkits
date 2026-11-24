@@ -10,7 +10,7 @@ import 'package:felectronic_dnie_example/clave/document_card.dart';
 import 'package:felectronic_dnie_example/shared/demo_controller.dart';
 import 'package:felectronic_dnie_example/shared/demo_tab.dart';
 import 'package:felectronic_dnie_example/shared/section_title.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 part 'clave_tab_state.dart';
 

@@ -3,7 +3,7 @@ import 'package:felectronic_dnie_example/dnie/with_session.dart';
 import 'package:felectronic_dnie_example/shared/action_button.dart';
 import 'package:felectronic_dnie_example/shared/demo_controller.dart';
 import 'package:felectronic_dnie_example/shared/section_title.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Actions that chain several reads of the card.
 final class DnieWorkflowSection extends StatelessWidget {

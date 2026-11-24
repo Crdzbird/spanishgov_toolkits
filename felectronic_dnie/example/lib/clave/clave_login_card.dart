@@ -4,7 +4,7 @@ import 'package:felectronic_dnie_example/clave/clave_method_icon.dart';
 import 'package:felectronic_dnie_example/clave/clave_session_actions.dart';
 import 'package:felectronic_dnie_example/shared/action_button.dart';
 import 'package:felectronic_dnie_example/shared/demo_controller.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 part 'clave_login_card_state.dart';
 

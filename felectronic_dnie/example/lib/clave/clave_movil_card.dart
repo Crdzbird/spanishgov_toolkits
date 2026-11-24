@@ -7,7 +7,7 @@ import 'package:felectronic_dnie_example/shared/action_button.dart';
 import 'package:felectronic_dnie_example/shared/demo_controller.dart';
 import 'package:felectronic_dnie_example/shared/demo_status.dart';
 import 'package:felectronic_dnie_example/shared/describe_error.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 part 'clave_movil_card_state.dart';
 

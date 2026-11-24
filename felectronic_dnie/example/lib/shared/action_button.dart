@@ -1,6 +1,6 @@
 import 'package:felectronic_dnie_example/shared/demo_controller.dart';
 import 'package:felectronic_dnie_example/shared/demo_status.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A button that runs [action] through [controller], showing [working]
 /// while it runs. It is disabled while any action of the tab is running.

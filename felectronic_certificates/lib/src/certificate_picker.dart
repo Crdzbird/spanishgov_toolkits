@@ -3,7 +3,7 @@ import 'dart:io' show Platform;
 import 'package:felectronic_certificates/src/apple_certificates.dart';
 import 'package:felectronic_certificates/src/certificate_session.dart';
 import 'package:felectronic_certificates_platform_interface/felectronic_certificates_platform_interface.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Presents the installed certificates and lets the user choose one.
 ///

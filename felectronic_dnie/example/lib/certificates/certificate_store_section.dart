@@ -3,7 +3,7 @@ import 'package:felectronic_dnie_example/certificates/certificate_import.dart';
 import 'package:felectronic_dnie_example/shared/action_button.dart';
 import 'package:felectronic_dnie_example/shared/demo_controller.dart';
 import 'package:felectronic_dnie_example/shared/section_title.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Getting certificates into the app and choosing the default one.
 final class CertificateStoreSection extends StatelessWidget {

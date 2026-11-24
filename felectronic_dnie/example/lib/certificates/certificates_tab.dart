@@ -2,7 +2,7 @@ import 'package:felectronic_dnie_example/certificates/certificate_store_section.
 import 'package:felectronic_dnie_example/certificates/certificate_use_section.dart';
 import 'package:felectronic_dnie_example/shared/demo_controller.dart';
 import 'package:felectronic_dnie_example/shared/demo_tab.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 part 'certificates_tab_state.dart';
 
