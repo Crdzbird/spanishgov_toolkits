@@ -14,6 +14,12 @@
   `DnieUnsupportedError` (code `DSUnsupportedException`) join the sealed
   `DnieError`, so exhaustive switches need two more cases.
 
+### Changed
+
+- The Pigeon bindings are regenerated with Pigeon 27.3. Channel names and the
+  message encoding are unchanged, so nothing changes on the wire; the Kotlin
+  `FlutterError` now extends `RuntimeException`.
+
 ## 2.0.0
 
 ### Breaking changes
