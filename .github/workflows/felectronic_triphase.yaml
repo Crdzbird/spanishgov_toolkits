@@ -26,7 +26,7 @@ jobs:
     # felectronic_x509.
     uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
     with:
-      flutter_version: 3.47.0
+      flutter_version: 3.50.0
       working_directory: felectronic_triphase
       # Measured at 91%; the protocol is covered end to end through a fake
       # transport. Set just below so an unrelated line does not break CI.
