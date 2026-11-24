@@ -1,8 +1,6 @@
-import 'dart:io' show Platform;
-import 'dart:typed_data';
-
 import 'package:felectronic_certificates/src/certificate_session.dart';
 import 'package:felectronic_certificates_platform_interface/felectronic_certificates_platform_interface.dart';
+import 'package:flutter/foundation.dart';
 
 /// Certificate handling that only applies to Apple platforms.
 ///
@@ -27,8 +25,12 @@ import 'package:felectronic_certificates_platform_interface/felectronic_certific
 /// So on Apple platforms a certificate has to be imported into the app itself.
 /// [AppleCertificates.importAndSelect] is that step, in one call.
 abstract final class AppleCertificates {
-  /// Whether the current platform is one this class applies to.
-  static bool get isSupported => Platform.isIOS || Platform.isMacOS;
+  /// Whether the current platform is one this class applies to: iOS or
+  /// macOS, and never the web.
+  static bool get isSupported =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS);
 
   /// Imports a PKCS#12 and makes it the default, in one step.
   ///

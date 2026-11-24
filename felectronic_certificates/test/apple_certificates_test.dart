@@ -1,37 +1,41 @@
-import 'dart:typed_data';
-
 import 'package:felectronic_certificates/felectronic_certificates.dart';
 import 'package:felectronic_certificates_platform_interface/felectronic_certificates_platform_interface.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 /// The Apple-only import path.
 ///
-/// These run on macOS, which `AppleCertificates` supports, so
-/// `importAndSelect` is called for real rather than re-implemented in the
-/// test. An earlier revision here drove the platform interface directly and
-/// therefore verified nothing about the code under test — the empty-password
-/// normalisation it claimed to check lives inside `importAndSelect`, and the
-/// test was performing that normalisation itself.
-///
-/// The consequence is that the non-Apple guard cannot be exercised here: on
-/// this host `isSupported` is true. It is asserted structurally instead.
+/// `isSupported` reads `defaultTargetPlatform`, so each test pins the
+/// platform it means instead of depending on the machine running it, and
+/// `importAndSelect` is called for real rather than re-implemented here.
 void main() {
   late _FakePlatform platform;
 
   setUp(() {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     platform = _FakePlatform();
     FelectronicCertificatesPlatform.instance = platform;
   });
 
+  tearDown(() => debugDefaultTargetPlatformOverride = null);
+
   Uint8List p12(int seed) => Uint8List.fromList([0x30, 0x82, seed]);
 
   group('platform guard', () {
-    /// Tests run on macOS, which is a supported platform, so the guard cannot
-    /// be made to fire here. What can be checked is that macOS is deliberately
-    /// included -- the class is for Apple platforms, not iOS alone.
-    test('macOS is supported alongside iOS', () {
+    test('iOS and macOS are supported', () {
       expect(AppleCertificates.isSupported, isTrue);
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      expect(AppleCertificates.isSupported, isTrue);
+    });
+
+    test('Android is refused before anything is imported', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      expect(AppleCertificates.isSupported, isFalse);
+      await expectLater(
+        AppleCertificates.importAndSelect(p12(1), password: 'pw'),
+        throwsUnsupportedError,
+      );
     });
   });
 

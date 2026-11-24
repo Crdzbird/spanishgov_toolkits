@@ -5,6 +5,10 @@
 - Requires Flutter 3.47 and Dart 3.13. The certificate picker imports Material
   from `material_ui`, since Flutter deprecated `package:flutter/material.dart`
   after 3.47.
+- `AppleCertificates.isSupported`, and the certificate picker's empty-list
+  message, read `defaultTargetPlatform` instead of `dart:io`'s `Platform`. The
+  answer on a device is the same, but it is false on the web rather than an
+  exception, and tests can set the platform instead of inheriting the host's.
 - `CertificateSession.sign` and `signWithDefaultCertificate` accept an optional
   `format`, producing CAdES, PAdES or XAdES signatures through the @firma
   service. Without one, behavior is unchanged: a bare PKCS#1 signature computed

@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:felectronic_certificates/src/apple_certificates.dart';
 import 'package:felectronic_certificates/src/certificate_session.dart';
 import 'package:felectronic_certificates_platform_interface/felectronic_certificates_platform_interface.dart';
@@ -116,7 +114,7 @@ class _EmptyState extends StatelessWidget {
     // On Apple platforms the usual cause is a certificate installed as a
     // configuration profile, which an app cannot read. Saying so beats an
     // empty list, which reads as a failure.
-    final explanation = Platform.isIOS || Platform.isMacOS
+    final explanation = AppleCertificates.isSupported
         ? AppleCertificates.emptyKeychainExplanation
         : 'No certificates are available on this device.';
     return Padding(
