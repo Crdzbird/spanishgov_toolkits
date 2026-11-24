@@ -60,7 +60,7 @@ class DNIeSigner {
         activity: Activity,
         onSuccess: (DniSignerResponse) -> Unit,
         onError: (Throwable) -> Unit,
-        isDebug: Boolean = true
+        isDebug: Boolean = false
     ) {
         signAfterScan(can, pin, timeout, signType, activity, onSuccess, onError) { keyEntry ->
             TriPhaseSignerManager(isDebug).triPhaseSign(

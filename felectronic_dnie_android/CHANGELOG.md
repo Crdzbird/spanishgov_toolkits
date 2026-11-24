@@ -24,10 +24,13 @@
 
 ### Fixed
 
-- The on-device signer `sign` now uses, previously unused, computed the
-  signature twice, so the Base64 it returned was the signature of empty input,
-  and that Base64 carried line breaks. It signs once and uses standard Base64
-  on one line.
+- The on-device signer that `sign` now uses had never been called before, and
+  it computed the signature twice: the Base64 it returned was the signature of
+  empty input, with line breaks. It signs once and returns standard Base64 on
+  one line.
+- `signCades` no longer writes the signing gateway's error responses to
+  logcat. The three-phase signer's debug logging was on by default, in release
+  builds too; it is now off.
 
 ## 2.0.0
 
