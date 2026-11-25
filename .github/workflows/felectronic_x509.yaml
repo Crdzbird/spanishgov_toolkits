@@ -24,7 +24,7 @@ jobs:
     # member of the pub workspace, so resolving it pulls in the Flutter
     # packages and requires the Flutter SDK. dart_package.yml exposes no
     # Flutter inputs, hence the Flutter workflow.
-    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v2
     with:
       flutter_version: 3.50.0
       working_directory: felectronic_x509
